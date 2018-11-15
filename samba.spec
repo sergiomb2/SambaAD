@@ -120,15 +120,6 @@ Source14: samba.pamd
 Source200: README.dc
 Source201: README.downgrade
 
-#Patch0:   CVE-2017-14746.patch
-#Patch1:   CVE-2017-15275.patch
-#Patch2:   samba-4.7-fix_smbclient_volume.patch
-#Patch3:   samba-4.7-fix_samba_with_systemd.patch
-#Patch4:   samba-4.7-net_ads_keytab_list.patch
-#Patch5:   samba-4.7-fix_aesni_intel_support.patch
-#Patch6:   samba-4.7-handle_smb_echo_gracefully.patch
-#Patch7:   samba-4.7-fix_smb2_client_read_after_free.patch
-
 Requires(pre): /usr/sbin/groupadd
 Requires(post): systemd
 Requires(preun): systemd
@@ -215,12 +206,6 @@ BuildRequires: libcephfs-devel
 %if %{with_dc}
 BuildRequires: compat-gnutls34-devel >= 3.4.7
 BuildRequires: compat-nettle32-devel >= 3.1.1
-#BuildRequires: pkgconfig(hogweed)
-#BuildRequires: pkgconfig(libidn)
-#BuildRequires: pkgconfig(libtasn1)
-#BuildRequires: pkgconfig(nettle)
-#BuildRequires: pkgconfig(p11-kit-1)
-#BuildRequires: pkgconfig(zlib)
 
 # Required by samba-tool to run tests
 BuildRequires: python2-crypto
@@ -322,6 +307,7 @@ of SMB/CIFS shares and printing to SMB/CIFS printers.
 Summary: Samba client libraries
 Requires(pre): %{name}-common = %{samba_depver}
 Requires: %{name}-common = %{samba_depver}
+Requires: %{name}-common-libs = %{samba_depver}
 %if %with_libwbclient
 Requires: libwbclient = %{samba_depver}
 %endif
@@ -380,12 +366,18 @@ Requires: %{name} = %{samba_depver}
 Requires: %{name}-libs = %{samba_depver}
 Requires: %{name}-dc-libs = %{samba_depver}
 Requires: %{name}-winbind = %{samba_depver}
+# samb-tool needs tdbbackup
+Requires: tdb-tools
 %if %{with_dc}
-Requires: %{name}-python-dc = %{samba_depver}
 # samba-tool requirements, explicitly require python2 right now
 Requires: python2
 Requires: python2-%{name} = %{samba_depver}
+Requires: %{name}-python-dc = %{samba_depver}
 Requires: python2-crypto
+# Force using libldb version to be the same as build version
+# Otherwise LDB modules will not be loaded and samba-tool will fail
+# See bug 1507420
+%requires_eq libldb
 
 ### Note that samba-dc right now cannot be used with Python 3
 ### so we should make sure it does use python2 explicitly
@@ -416,7 +408,7 @@ The %{name}-dc-libs package contains the libraries needed by the DC to
 link against the SMB, RPC and other protocols.
 
 ### DC-BIND
-%if %with_dc
+%if %{with_dc}
 %package dc-bind-dlz
 Summary: Bind DLZ module for Samba AD
 Requires: %{name}-common = %{samba_depver}
@@ -605,7 +597,7 @@ Requires: %{name}-winbind = %{samba_depver}
 Requires: %{name}-client-libs = %{samba_depver}
 Requires: %{name}-libs = %{samba_depver}
 Requires: %{name}-test-libs = %{samba_depver}
-%if %with_dc
+%if %{with_dc}
 Requires: %{name}-dc-libs = %{samba_depver}
 %endif
 Requires: %{name}-libs = %{samba_depver}
@@ -842,7 +834,7 @@ export PKG_CONFIG_PATH=/usr/gnutls34/lib/pkgconfig:/usr/lib64/compat-nettle32/pk
 %if %with_mitkrb5
         --with-system-mitkrb5 \
 %endif
-%if ! %with_dc
+%if ! %{with_dc}
         --without-ad-dc \
 %endif
 %if ! %with_vfs_glusterfs
@@ -951,14 +943,14 @@ install -m 0644 ctdb/config/ctdbd.conf %{buildroot}%{_sysconfdir}/ctdb/ctdbd.con
 
 install -m 0644 %{SOURCE201} packaging/README.downgrade
 
-%if ! %with_dc
+%if ! %{with_dc}
 install -m 0644 %{SOURCE200} packaging/README.dc
 install -m 0644 %{SOURCE200} packaging/README.dc-libs
 %endif
 
 install -d -m 0755 %{buildroot}%{_unitdir}
 services="nmb smb winbind"
-%if %with_dc
+%if %{with_dc}
 services="$services samba"
 %endif
 for i in $services ; do
@@ -978,8 +970,9 @@ install -m 0755 packaging/NetworkManager/30-winbind-systemd \
 install -d -m 0755 %{buildroot}%{_libdir}/krb5/plugins/libkrb5
 touch %{buildroot}%{_libdir}/krb5/plugins/libkrb5/winbind_krb5_locator.so
 
-%if ! %with_dc
-for i in %{_libdir}/samba/libdfs-server-ad-samba4.so \
+%if ! %{with_dc}
+for i in \
+    %{_libdir}/samba/libdfs-server-ad-samba4.so \
     %{_libdir}/samba/libdnsserver-common-samba4.so \
     %{_libdir}/samba/libdsdb-garbage-collect-tombstones-samba4.so \
     %{_mandir}/man8/samba.8 \
@@ -1070,7 +1063,7 @@ fi
 
 %postun common-libs -p /sbin/ldconfig
 
-%if %with_dc
+%if %{with_dc}
 %post dc-libs -p /sbin/ldconfig
 
 %postun dc-libs -p /sbin/ldconfig
@@ -1210,7 +1203,7 @@ rm -rf %{buildroot}
 %{_bindir}/eventlogadm
 %{_sbindir}/nmbd
 %{_sbindir}/smbd
-%if %with_dc
+%if %{with_dc}
 # This is only used by vfs_dfs_samba4
 %{_libdir}/samba/libdfs-server-ad-samba4.so
 %endif
@@ -1230,7 +1223,7 @@ rm -rf %{buildroot}
 %{_libdir}/samba/vfs/commit.so
 %{_libdir}/samba/vfs/crossrename.so
 %{_libdir}/samba/vfs/default_quota.so
-%if %with_dc
+%if %{with_dc}
 %{_libdir}/samba/vfs/dfs_samba4.so
 %endif
 %{_libdir}/samba/vfs/dirsort.so
@@ -1546,7 +1539,11 @@ rm -rf %{buildroot}
 %ghost %dir /var/run/samba
 %ghost %dir /var/run/winbindd
 %dir /var/lib/samba
+%if %{with_dc}
+%attr(770,root,named) %dir /var/lib/samba/private
+%else
 %attr(700,root,root) %dir /var/lib/samba/private
+%endif
 %dir /var/lib/samba/lock
 %attr(755,root,root) %dir %{_sysconfdir}/samba
 %config(noreplace) %{_sysconfdir}/samba/smb.conf
@@ -1593,7 +1590,7 @@ rm -rf %{buildroot}
 %files dc
 %defattr(-,root,root)
 
-%if %with_dc
+%if %{with_dc}
 %{_unitdir}/samba.service
 %{_bindir}/samba-tool
 %{_sbindir}/samba
@@ -1664,7 +1661,7 @@ rm -rf %{buildroot}
 ### DC-LIBS
 %files dc-libs
 %defattr(-,root,root)
-%if %with_dc
+%if %{with_dc}
 %{_libdir}/samba/libdb-glue-samba4.so
 %{_libdir}/samba/libprocess-model-samba4.so
 %{_libdir}/samba/libservice-samba4.so
@@ -1694,9 +1691,8 @@ rm -rf %{buildroot}
 %endif # with_dc
 
 ### DC-BIND
-%if %with_dc
+%if %{with_dc}
 %files dc-bind-dlz
-#%attr(770,root,named) #dir /var/lib/samba/bind-dns
 %dir %{_libdir}/samba/bind9
 %{_libdir}/samba/bind9/dlz_bind9.so
 %{_libdir}/samba/bind9/dlz_bind9_9.so

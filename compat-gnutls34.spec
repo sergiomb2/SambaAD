@@ -4,7 +4,7 @@
 Summary: A TLS protocol implementation
 Name: compat-gnutls34
 Version: 3.4.17
-Release: 2.1%{?dist}
+Release: 3%{?dist}
 # The libraries are LGPLv2.1+, utilities are GPLv3+
 License: GPLv3+ and LGPLv2+
 Group: System Environment/Libraries
@@ -155,28 +155,22 @@ rm -f src/libopts/*.c src/libopts/*.h src/libopts/compat/*.c src/libopts/compat/
 
 
 %build
-  export PKG_CONFIG_PATH=/usr/lib64/compat-nettle32/pkgconfig/
-  CFLAGS="${CFLAGS:--O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches   -m64 -mtune=generic}" ; export CFLAGS ; 
-  CXXFLAGS="${CXXFLAGS:--O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches   -m64 -mtune=generic}" ; export CXXFLAGS ; 
-  FFLAGS="${FFLAGS:--O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches   -m64 -mtune=generic -I/usr/lib64/gfortran/modules}" ; export FFLAGS ; 
-  FCFLAGS="${FCFLAGS:--O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches   -m64 -mtune=generic -I/usr/lib64/gfortran/modules}" ; export FCFLAGS ; 
-  LDFLAGS="${LDFLAGS:--Wl,-z,relro }"; export LDFLAGS; 
-  [ "1" == 1 ] && [ "x86_64" == ppc64le ] && /usr/lib/rpm/redhat/libtool-handle-ppc64le.sh ; 
-  for i in $(find . -name config.guess -o -name config.sub) ; do 
-      [ -f /usr/lib/rpm/redhat/$(basename $i) ] && /usr/bin/rm -f $i && /usr/bin/cp -fv /usr/lib/rpm/redhat/$(basename $i) $i ; 
-  done ; 
-  ./configure --build=x86_64-redhat-linux-gnu --host=x86_64-redhat-linux-gnu \
+export PKG_CONFIG_PATH=/usr/lib64/compat-nettle32/pkgconfig/
+
+CFLAGS="${CFLAGS:-%optflags}" ; export CFLAGS ;
+CXXFLAGS="${CXXFLAGS:-%optflags}" ; export CXXFLAGS ;
+FFLAGS="${FFLAGS:-%optflags}" ; export FFLAGS ;
+
+./configure --build=x86_64-redhat-linux-gnu --host=x86_64-redhat-linux-gnu \
         --disable-dependency-tracking \
         --prefix=/usr/gnutls34 \
-           --with-libtasn1-prefix=%{_prefix} \
-           --with-included-libcfg \
-           --disable-static \
-           --disable-openssl-compatibility \
-           --disable-srp-authentication \
-	   --disable-non-suiteb-curves \
-	   --with-system-priority-file=%{_sysconfdir}/crypto-policies/back-ends/gnutls.config \
-	   --with-default-trust-store-pkcs11="pkcs11:model=p11-kit-trust;manufacturer=PKCS%2311%20Kit" \
-	   --with-trousers-lib=%{_libdir}/libtspi.so.1 \
+        --disable-static \
+        --disable-openssl-compatibility \
+        --disable-srp-authentication \
+        --disable-non-suiteb-curves \
+        --with-system-priority-file=%{_sysconfdir}/crypto-policies/back-ends/gnutls.config \
+        --with-default-trust-store-pkcs11="pkcs11:model=p11-kit-trust;manufacturer=PKCS%2311%20Kit" \
+        --with-trousers-lib=%{_libdir}/libtspi.so.1 \
 %if %{with guile}
            --enable-guile \
 %else
@@ -266,6 +260,9 @@ install %{SOURCE3} $RPM_BUILD_ROOT/etc/ld.so.conf.d/compat-gnutls34.conf
 %endif
 
 %changelog
+* Thu Nov 15 2018 2 - 3.4.17-3.1
+-
+
 * Mon Feb 1 2010 Support <support@atomicorp.com> 2.8.5-1
 - Backport GNUtls to Centos/rhel 4 and 5
 
