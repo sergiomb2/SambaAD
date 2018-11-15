@@ -211,12 +211,12 @@ install %{SOURCE3} $RPM_BUILD_ROOT/etc/ld.so.conf.d/compat-gnutls34.conf
 #make check %{?_smp_mflags}
 
 %post -p /sbin/ldconfig
-
 %postun -p /sbin/ldconfig
 
+%post c++ -p /sbin/ldconfig
+%postun c++ -p /sbin/ldconfig
 
 %post guile -p /sbin/ldconfig
-
 %postun guile -p /sbin/ldconfig
 
 %files -f gnutls.lang

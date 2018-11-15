@@ -1,6 +1,6 @@
 Name:           nettle
 Version:        3.2
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        A low-level cryptographic library
 
 Group:          Development/Libraries
