@@ -1,4 +1,4 @@
-%bcond_without dane
+%bcond_with dane
 %bcond_without guile
 
 Summary: A TLS protocol implementation
@@ -12,7 +12,7 @@ BuildRequires: p11-kit-devel >= 0.21.3, gettext-devel
 BuildRequires: zlib-devel, readline-devel, libtasn1-devel >= 4.3
 BuildRequires: libtool, automake, autoconf, texinfo
 BuildRequires: autogen-libopts-devel >= 5.18 autogen
-BuildRequires: nettle-devel >= 3.1.1
+BuildRequires: compat-nettle32-devel >= 3.1.1
 BuildRequires: trousers-devel >= 0.3.11.2
 BuildRequires: libidn-devel
 BuildRequires: gperf, net-tools, softhsm, datefudge
@@ -155,6 +155,7 @@ rm -f src/libopts/*.c src/libopts/*.h src/libopts/compat/*.c src/libopts/compat/
 
 
 %build
+  export PKG_CONFIG_PATH=/usr/lib64/compat-nettle32/pkgconfig/
   CFLAGS="${CFLAGS:--O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches   -m64 -mtune=generic}" ; export CFLAGS ; 
   CXXFLAGS="${CXXFLAGS:--O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches   -m64 -mtune=generic}" ; export CXXFLAGS ; 
   FFLAGS="${FFLAGS:--O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches   -m64 -mtune=generic -I/usr/lib64/gfortran/modules}" ; export FFLAGS ; 

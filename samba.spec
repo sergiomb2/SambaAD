@@ -6,7 +6,7 @@
 # ctdb is enabled by default, you can disable it with: --without clustering
 %bcond_without clustering
 
-%define main_release 2
+%define main_release 3
 
 %define samba_version 4.7.7
 %define talloc_version 2.1.9
@@ -214,12 +214,13 @@ BuildRequires: libcephfs-devel
 %endif
 %if %{with_dc}
 BuildRequires: compat-gnutls34-devel >= 3.4.7
-BuildRequires: pkgconfig(hogweed)
-BuildRequires: pkgconfig(libidn)
-BuildRequires: pkgconfig(libtasn1)
-BuildRequires: pkgconfig(nettle)
-BuildRequires: pkgconfig(p11-kit-1)
-BuildRequires: pkgconfig(zlib)
+BuildRequires: compat-nettle32-devel >= 3.1.1
+#BuildRequires: pkgconfig(hogweed)
+#BuildRequires: pkgconfig(libidn)
+#BuildRequires: pkgconfig(libtasn1)
+#BuildRequires: pkgconfig(nettle)
+#BuildRequires: pkgconfig(p11-kit-1)
+#BuildRequires: pkgconfig(zlib)
 
 # Required by samba-tool to run tests
 BuildRequires: python2-crypto
@@ -817,7 +818,7 @@ xzcat %{SOURCE0} | gpgv2 --quiet --keyring %{SOURCE2} %{SOURCE1} -
 
 %global _samba_private_libraries %{_libsmbclient}%{_libwbclient}
 
-export PKG_CONFIG_PATH=/usr/gnutls34/lib/pkgconfig
+export PKG_CONFIG_PATH=/usr/gnutls34/lib/pkgconfig:/usr/lib64/compat-nettle32/pkgconfig
 
 %configure \
         --enable-fhs \
