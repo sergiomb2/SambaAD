@@ -8,7 +8,7 @@
 
 %define main_release 1
 
-%define samba_version 4.8.6
+%define samba_version 4.8.8
 %define talloc_version 2.1.11
 %define tdb_version 1.3.15
 %define tevent_version 0.9.36
@@ -104,6 +104,8 @@ License:        GPLv3+ and LGPLv3+
 URL:            http://www.samba.org/
 
 # This is a xz recompressed file of https://ftp.samba.org/pub/samba/samba-%%{version}%%{pre_release}.tar.gz
+# gunzip SOURCES/samba-4.8.8.tar.gz
+# xz SOURCES/samba-4.8.8.tar
 Source0:        samba-%{version}%{pre_release}.tar.xz
 Source1:        https://ftp.samba.org/pub/samba/samba-%{version}%{pre_release}.tar.asc
 Source2:        gpgkey-52FBC0B86D954B0843324CDC6F33915B6568B7EA.gpg
@@ -813,7 +815,7 @@ xzcat %{SOURCE0} | gpgv2 --quiet --keyring %{SOURCE2} %{SOURCE1} -
 
 %global _samba_private_libraries %{_libsmbclient}%{_libwbclient}
 
-export PKG_CONFIG_PATH=/usr/gnutls34/lib/pkgconfig:/usr/lib64/compat-nettle32/pkgconfig
+export PKG_CONFIG_PATH=%{_libdir}/compat-gnutls34/pkgconfig:%{_libdir}/compat-nettle32/pkgconfig
 
 %configure \
         --enable-fhs \
@@ -836,6 +838,7 @@ export PKG_CONFIG_PATH=/usr/gnutls34/lib/pkgconfig:/usr/lib64/compat-nettle32/pk
 %endif
 %if %with_mitkrb5
         --with-system-mitkrb5 \
+        --with-experimental-mit-ad-dc \
 %endif
 %if ! %{with_dc}
         --without-ad-dc \
@@ -1447,6 +1450,7 @@ fi
 %{_libdir}/samba/libcli-smb-common-samba4.so
 %{_libdir}/samba/libcli-spoolss-samba4.so
 %{_libdir}/samba/libcliauth-samba4.so
+%{_libdir}/samba/libcmdline-contexts-samba4.so
 %{_libdir}/samba/libcmdline-credentials-samba4.so
 %{_libdir}/samba/libcommon-auth-samba4.so
 %{_libdir}/samba/libdbwrap-samba4.so
@@ -1573,6 +1577,7 @@ fi
 %files common-libs
 %defattr(-,root,root)
 # common libraries
+%{_libdir}/samba/libpopt-samba3-cmdline-samba4.so
 %{_libdir}/samba/libpopt-samba3-samba4.so
 %if %{with_intel_aes_accel}
 %{_libdir}/samba/libaesni-intel-samba4.so
@@ -2931,6 +2936,7 @@ fi
 %{_datadir}/ctdb/tests/simple/56_replicated_transaction_recovery.sh
 %{_datadir}/ctdb/tests/simple/58_ctdb_restoredb.sh
 %{_datadir}/ctdb/tests/simple/60_recoverd_missing_ip.sh
+%{_datadir}/ctdb/tests/simple/69_recovery_resurrect_deleted.sh
 %{_datadir}/ctdb/tests/simple/70_recoverpdbbyseqnum.sh
 %{_datadir}/ctdb/tests/simple/71_ctdb_wipedb.sh
 %{_datadir}/ctdb/tests/simple/72_update_record_persistent.sh
@@ -3168,6 +3174,12 @@ fi
 %endif # with_clustering_support
 
 %changelog
+* Thu Dec 20 2018 Sérgio Basto <sergio@serjux.com> - 1:4.8.8-1.1
+- Update to 4.8.8
+
+* Thu Dec 20 2018 Sérgio Basto <sergio@serjux.com> - 1:4.8.6-2
+- With new compat-gnutls34
+
 * Thu Nov 15 2018 Sérgio Basto <sergio@serjux.com> - 1:4.8.6-1
 - Sync with F28 and Samba 4.8.6
 
