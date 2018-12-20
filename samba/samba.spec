@@ -2351,7 +2351,7 @@ fi
 %if %with_clustering_support
 %files -n ctdb
 %defattr(-,root,root)
-#doc ctdb/README
+%doc ctdb/README
 # Obsolete
 %config(noreplace, missingok) %{_sysconfdir}/sysconfig/ctdb
 
@@ -2445,7 +2445,7 @@ fi
 
 %files -n ctdb-tests
 %defattr(-,root,root)
-#doc ctdb/tests/README
+%doc ctdb/tests/README
 %{_bindir}/ctdb_run_tests
 %{_bindir}/ctdb_run_cluster_tests
 
