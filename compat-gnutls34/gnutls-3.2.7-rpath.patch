@@ -1,0 +1,45 @@
+diff -ur gnutls-3.2.7.orig/configure gnutls-3.2.7/configure
+--- gnutls-3.2.7.orig/configure	2013-11-23 11:09:49.000000000 +0100
++++ gnutls-3.2.7/configure	2013-11-25 16:53:05.559440656 +0100
+@@ -39652,7 +39652,7 @@
+ shlibpath_overrides_runpath=unknown
+ version_type=none
+ dynamic_linker="$host_os ld.so"
+-sys_lib_dlsearch_path_spec="/lib /usr/lib"
++sys_lib_dlsearch_path_spec="/lib /usr/lib /lib64 /usr/lib64"
+ need_lib_prefix=unknown
+ hardcode_into_libs=no
+ 
+--- ./libdane/Makefile.am.orig	2018-12-20 02:43:23.074387222 +0000
++++ ./libdane/Makefile.am	2018-12-20 02:54:43.599890419 +0000
+@@ -20,7 +20,7 @@
+ 
+ ACLOCAL_AMFLAGS = -I ../m4 -I ../gl/m4
+ 
+-AM_CFLAGS = $(WERROR_CFLAGS) $(WSTACK_CFLAGS) $(WARN_CFLAGS)
++AM_CFLAGS = $(WERROR_CFLAGS) $(WSTACK_CFLAGS) $(WARN_CFLAGS) $(NETTLE_CFLAGS)
+ AM_CPPFLAGS = \
+ 	-I$(srcdir)/../gl		\
+ 	-I$(builddir)/../gl		\
+--- ./tests/Makefile.am.orig	2018-12-20 02:45:53.665941232 +0000
++++ ./tests/Makefile.am	2018-12-20 02:54:15.906788573 +0000
+@@ -37,7 +37,7 @@ EXTRA_DIST = suppressions.valgrind eagai
+ 	certs/ca-ecc.pem certs/cert-ecc384.pem certs/cert-ecc.pem certs/ecc256.pem \
+ 	certs/ecc521.pem certs/rsa-2432.pem x509cert-dir/ca.pem cert-common.h
+ 
+-AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
++AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS) $(NETTLE_CFLAGS)
+ AM_CPPFLAGS = \
+ 	$(P11_KIT_CFLAGS) \
+ 	-I$(top_srcdir)/lib/includes		\
+--- ./tests/slow/Makefile.am.orig	2018-12-20 03:05:54.506354508 +0000
++++ ./tests/slow/Makefile.am	2018-12-20 03:06:05.965396564 +0000
+@@ -17,7 +17,7 @@
+ # along with this file; if not, write to the Free Software Foundation,
+ # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ 
+-AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
++AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS) $(NETTLE_CFLAGS)
+ AM_CPPFLAGS = -I$(top_srcdir)/lib/includes		\
+ 	-I$(top_builddir)/lib/includes \
+ 	-I$(top_srcdir)/tests/ \

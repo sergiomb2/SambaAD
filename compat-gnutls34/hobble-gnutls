@@ -1,0 +1,15 @@
+#!/bin/sh
+set -x
+
+if [ "$1" = "-e" ] ; then
+    CMD="cat < /dev/null >"
+else
+    CMD="rm -f"
+fi
+
+# SRP
+for f in auth/srp_sb64.c auth/srp_passwd.c auth/srp_rsa.c \
+    gnutls_srp.c auth/srp.c ext/srp.c ; do
+    eval "$CMD lib/$f"
+done
+
