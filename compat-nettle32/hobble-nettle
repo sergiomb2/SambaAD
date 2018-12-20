@@ -1,0 +1,92 @@
+#!/bin/sh
+set -x
+
+if [ "$1" = "-e" ] ; then
+    CMD="cat < /dev/null >"
+else
+    CMD="rm -f"
+fi
+
+# ECC-192, 224
+for f in ecc-192.c ecc-224.c; do
+    eval "$CMD $f"
+done
+
+patch -p1 << __EOF__
+diff --git a/eccdata.c b/eccdata.c
+index 9533d78..2f0e4e7 100644
+--- a/eccdata.c
++++ b/eccdata.c
+@@ -349,71 +349,6 @@ ecc_curve_init (struct ecc_curve *ecc, unsigned bit_size)
+ {
+   switch (bit_size)
+     {
+-    case 192:      
+-      ecc_curve_init_str (ecc, ECC_TYPE_WEIERSTRASS,
+-			  /* p = 2^{192} - 2^{64} - 1 */
+-			  "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE"
+-			  "FFFFFFFFFFFFFFFF",
+-
+-			  "64210519e59c80e70fa7e9ab72243049"
+-			  "feb8deecc146b9b1", 
+-
+-			  "ffffffffffffffffffffffff99def836"
+-			  "146bc9b1b4d22831",
+-
+-			  "188da80eb03090f67cbf20eb43a18800"
+-			  "f4ff0afd82ff1012",
+-
+-			  "07192b95ffc8da78631011ed6b24cdd5"
+-			  "73f977a11e794811",
+-			  NULL, NULL);
+-      ecc->ref = ecc_alloc (3);
+-      ecc_set_str (&ecc->ref[0], /* 2 g */
+-		   "dafebf5828783f2ad35534631588a3f629a70fb16982a888",
+-		   "dd6bda0d993da0fa46b27bbc141b868f59331afa5c7e93ab");
+-      
+-      ecc_set_str (&ecc->ref[1], /* 3 g */
+-		   "76e32a2557599e6edcd283201fb2b9aadfd0d359cbb263da",
+-		   "782c37e372ba4520aa62e0fed121d49ef3b543660cfd05fd");
+-
+-      ecc_set_str (&ecc->ref[2], /* 4 g */
+-		   "35433907297cc378b0015703374729d7a4fe46647084e4ba",
+-		   "a2649984f2135c301ea3acb0776cd4f125389b311db3be32");
+-
+-      break;
+-    case 224:
+-      ecc_curve_init_str (ecc, ECC_TYPE_WEIERSTRASS,
+-			  /* p = 2^{224} - 2^{96} + 1 */
+-			  "ffffffffffffffffffffffffffffffff"
+-			  "000000000000000000000001",
+-
+-			  "b4050a850c04b3abf54132565044b0b7"
+-			  "d7bfd8ba270b39432355ffb4",
+-
+-			  "ffffffffffffffffffffffffffff16a2"
+-			  "e0b8f03e13dd29455c5c2a3d",
+-
+-			  "b70e0cbd6bb4bf7f321390b94a03c1d3"
+-			  "56c21122343280d6115c1d21",
+-
+-			  "bd376388b5f723fb4c22dfe6cd4375a0"
+-			  "5a07476444d5819985007e34",
+-			  NULL, NULL);
+-
+-      ecc->ref = ecc_alloc (3);
+-      ecc_set_str (&ecc->ref[0], /* 2 g */
+-		   "706a46dc76dcb76798e60e6d89474788d16dc18032d268fd1a704fa6",
+-		   "1c2b76a7bc25e7702a704fa986892849fca629487acf3709d2e4e8bb");
+-      
+-      ecc_set_str (&ecc->ref[1], /* 3 g */
+-		   "df1b1d66a551d0d31eff822558b9d2cc75c2180279fe0d08fd896d04",
+-		   "a3f7f03cadd0be444c0aa56830130ddf77d317344e1af3591981a925");
+-
+-      ecc_set_str (&ecc->ref[2], /* 4 g */
+-		   "ae99feebb5d26945b54892092a8aee02912930fa41cd114e40447301",
+-		   "482580a0ec5bc47e88bc8c378632cd196cb3fa058a7114eb03054c9");
+-
+-      break;
+     case 256:
+       ecc_curve_init_str (ecc, ECC_TYPE_WEIERSTRASS,
+ 			  /* p = 2^{256} - 2^{224} + 2^{192} + 2^{96} - 1 */
+__EOF__
