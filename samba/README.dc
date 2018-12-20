@@ -1,0 +1,20 @@
+MIT Kerberos 5 Support
+=======================
+
+Fedora is using MIT Kerberos implementation as its Kerberos infrastructure of
+choice. The Samba build in Fedora is using MIT Kerberos implementation in order
+to allow system-wide interoperability between both desktop and server
+applications running on the same machine.
+
+At the moment the Samba Active Directory Domain Controller implementation is
+not available with MIT Kereberos. FreeIPA and Samba Team members are currently
+working on Samba MIT Kerberos support as this is a requirement for a GNU/Linux
+distribution integration of Samba AD DC features.
+
+We have just finished migrating the file server and all client utilities to MIT
+Kerberos.  The result of this work is available in samba-* packages in Fedora.
+We'll provide Samba AD DC functionality as soon as its support of MIT Kerberos
+KDC will be ready.
+
+In case of further questions do not hesitate to send your inquiries to
+samba-owner@fedoraproject.org
