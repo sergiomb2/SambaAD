@@ -1,10 +1,10 @@
-%bcond_with dane
+%bcond_without dane
 %bcond_without guile
 
 Summary: A TLS protocol implementation
 Name: compat-gnutls34
 Version: 3.4.17
-Release: 3%{?dist}
+Release: 4%{?dist}
 # The libraries are LGPLv2.1+, utilities are GPLv3+
 License: GPLv3+ and LGPLv2+
 Group: System Environment/Libraries
@@ -32,9 +32,9 @@ URL: http://www.gnutls.org/
 #Source1: ftp://ftp.gnutls.org/gcrypt/gnutls/%{name}-%{version}.tar.xz.sig
 # XXX patent tainted code removed.
 Source0: gnutls-%{version}-hobbled.tar.xz
-Source1: libgnutls-config
+#Source1: libgnutls-config
 Source2: hobble-gnutls
-Source3: compat-gnutls34.conf
+#Source3: compat-gnutls34.conf
 Patch1: gnutls-3.2.7-rpath.patch
 Patch3: gnutls-3.1.11-nosrp.patch
 Patch4: gnutls-3.4.1-default-policy.patch
@@ -157,14 +157,8 @@ rm -f src/libopts/*.c src/libopts/*.h src/libopts/compat/*.c src/libopts/compat/
 %build
 export PKG_CONFIG_PATH=/usr/lib64/compat-nettle32/pkgconfig/
 
-CFLAGS="${CFLAGS:-%optflags}" ; export CFLAGS ;
-CXXFLAGS="${CXXFLAGS:-%optflags}" ; export CXXFLAGS ;
-FFLAGS="${FFLAGS:-%optflags}" ; export FFLAGS ;
-
-./configure --build=x86_64-redhat-linux-gnu --host=x86_64-redhat-linux-gnu \
-        --disable-dependency-tracking \
-        --prefix=/usr/gnutls34 \
-        --disable-static \
+autoreconf -v
+%configure --disable-static \
         --disable-openssl-compatibility \
         --disable-srp-authentication \
         --disable-non-suiteb-curves \
@@ -177,10 +171,8 @@ FFLAGS="${FFLAGS:-%optflags}" ; export FFLAGS ;
            --disable-guile \
 %endif
 %if %{with dane}
-	   --with-unbound-root-key-file=/var/lib/unbound/root.key \
+           --with-unbound-root-key-file=/var/lib/unbound/root.key \
            --enable-dane \
-%else
-           --disable-dane \
 %endif
            --disable-rpath
 
@@ -188,27 +180,46 @@ FFLAGS="${FFLAGS:-%optflags}" ; export FFLAGS ;
 
 %install
 %make_install
-rm -f $RPM_BUILD_ROOT/usr/gnutls34/bin/srptool
-rm -f $RPM_BUILD_ROOT/usr/gnutls34/bin/gnutls-srpcrypt
-cp -f %{SOURCE1} $RPM_BUILD_ROOT/usr/gnutls34/bin/libgnutls-config
+
+mkdir -p $RPM_BUILD_ROOT%{_includedir}/%{name}
+mv $RPM_BUILD_ROOT%{_includedir}/gnutls $RPM_BUILD_ROOT%{_includedir}/%{name}/
+mkdir -p $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
+mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/gnutls.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
+sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/gnutls.pc
+#sed -r -i 's#^(libdir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/nettle.pc
+#sed -r -i 's#^(libdir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/hogweed.pc
+
+# Rename or delete bin files to avoid conflicts with base packages
+#mv $RPM_BUILD_ROOT%{_infodir}/nettle.info $RPM_BUILD_ROOT%{_infodir}/nettle-3.2.info
+rm -f $RPM_BUILD_ROOT%{_bindir}/srptool
+rm -f $RPM_BUILD_ROOT%{_bindir}/gnutls-srpcrypt
+#cp -f %{SOURCE1} $RPM_BUILD_ROOT/%{_bindir}/libgnutls-config
 rm -f $RPM_BUILD_ROOT%{_mandir}/man1/srptool.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man3/*srp*
-rm -f $RPM_BUILD_ROOT%{_infodir}/dir
-rm -f $RPM_BUILD_ROOT/usr/gnutls34/lib/*.la
-rm -f $RPM_BUILD_ROOT/usr/gnutls34/lib/guile/2.0/guile-gnutls*.a
-rm -f $RPM_BUILD_ROOT/usr/gnutls34/lib/guile/2.0/guile-gnutls*.la
-rm -f $RPM_BUILD_ROOT/usr/gnutls34/lib/gnutls/libpkcs11mock1.*
-%if %{without dane}
-rm -f $RPM_BUILD_ROOT/usr/gnutls34/lib/pkgconfig/gnutls-dane.pc
+rm -f $RPM_BUILD_ROOT%{_mandir}/man1/srptool.1
+# rm -f $RPM_BUILD_ROOT%{_mandir}/man3/*srp*
+# rm -f $RPM_BUILD_ROOT%{_infodir}/dir
+# all 
+rm -f $RPM_BUILD_ROOT%{_mandir}/man3/*
+rm -f $RPM_BUILD_ROOT%{_infodir}/*
+rm -f $RPM_BUILD_ROOT%{_libdir}/*.la
+rm -f $RPM_BUILD_ROOT%{_libdir}/guile/2.0/guile-gnutls*.a
+rm -f $RPM_BUILD_ROOT%{_libdir}/guile/2.0/guile-gnutls*.la
+rm -f $RPM_BUILD_ROOT%{_libdir}/gnutls/libpkcs11mock1.*
+%if %{with dane}
+mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/gnutls-dane.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
+sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/gnutls-dane.pc
+%else
+rm -f $RPM_BUILD_ROOT/%{_libdir}/pkgconfig/gnutls-dane.pc
 %endif
 
-mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d/
-install %{SOURCE3} $RPM_BUILD_ROOT/etc/ld.so.conf.d/compat-gnutls34.conf
+#mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d/
+#install %{SOURCE3} $RPM_BUILD_ROOT/etc/ld.so.conf.d/compat-gnutls34.conf
 
 %find_lang gnutls
+rm -f $RPM_BUILD_ROOT/usr/share/locale/*/LC_MESSAGES/gnutls.mo
 
-#%check
-#make check %{?_smp_mflags}
+%check
+make check %{?_smp_mflags}
 
 %post -p /sbin/ldconfig
 %postun -p /sbin/ldconfig
@@ -219,52 +230,413 @@ install %{SOURCE3} $RPM_BUILD_ROOT/etc/ld.so.conf.d/compat-gnutls34.conf
 %post guile -p /sbin/ldconfig
 %postun guile -p /sbin/ldconfig
 
-%files -f gnutls.lang
-%defattr(-,root,root,-)
-/etc/ld.so.conf.d/compat-gnutls34.conf
-/usr/gnutls34/lib/libgnutls.so.30*
-#%doc COPYING COPYING.LIB README AUTHORS
+#files -f gnutls.lang
+#/etc/ld.so.conf.d/compat-gnutls34.conf
+%files
+%{_libdir}/libgnutls.so.30*
+%doc COPYING README AUTHORS
 
 %files c++
-/usr/gnutls34/lib/libgnutlsxx.so.*
+%{_libdir}/libgnutlsxx.so.*
 
 %files devel
-%defattr(-,root,root,-)
 #/usr/gnutls/bin/libgnutls*-config
-/usr/gnutls34/include/gnutls/*.h
-/usr/gnutls34/lib/libgnutls*.so
-/usr/gnutls34/lib/pkgconfig/*.pc
-/usr/gnutls34/share/*
-#%{_mandir}/man3/*
-#%{_infodir}/gnutls*
+%{_includedir}/%{name}/gnutls/*.h
+%{_libdir}/libgnutls*.so
+%dir %{_libdir}/%{name}
+%{_libdir}/%{name}/pkgconfig/*.pc
+#/usr/gnutls34/share/*
+#{_mandir}/man3/*
+#{_infodir}/*
 
 %files utils
-%defattr(-,root,root,-)
-/usr/gnutls34/bin/*
+%{_bindir}/*
 %doc doc/certtool.cfg
+%{_mandir}/man1/*
 
 %if %{with dane}
 %files dane
-%defattr(-,root,root,-)
-/usr/gnutls34/lib/libgnutls-dane.so.*
+%{_libdir}/libgnutls-dane.so.*
 %endif
 
 %if %{with guile}
 %files guile
-%defattr(-,root,root,-)
-/usr/gnutls34/lib/guile/2.0/guile-gnutls*.so*
-/usr/gnutls34/share/guile/site/gnutls
-/usr/gnutls34/share/guile/site/gnutls.scm
-/usr/gnutls34/lib/guile/2.0/site-ccache/gnutls.go
-/usr/gnutls34/lib/guile/2.0/site-ccache/gnutls/extra.go
+%{_libdir}/guile/2.0/guile-gnutls*.so*
+%{_datadir}/guile/site/gnutls
+%{_datadir}/guile/site/gnutls.scm
+%{_libdir}/guile/2.0/site-ccache/gnutls.go
+%{_libdir}/guile/2.0/site-ccache/gnutls/extra.go
 %endif
 
 %changelog
-* Thu Nov 15 2018 2 - 3.4.17-3.1
--
+* Wed Dec 19 2018 Sérgio Basto <sergio@serjux.com> - 3.4.17-4
+- Rewrite compat package
 
-* Mon Feb 1 2010 Support <support@atomicorp.com> 2.8.5-1
-- Backport GNUtls to Centos/rhel 4 and 5
+* Thu Nov 15 2018 Sérgio Basto <sergio@serjux.com> - 3.4.17-3
+- Compat-gnutls34 based on compat-gnutls2-2.8.5-2.art.src (Backport GNUtls to Centos/rhel 4 and 5)
+
+* Wed Jan 11 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.17-2
+- Addressed various flaws (CVE-2017-5337, CVE-2017-5334, CVE-2017-5336, CVE-2017-5335)
+
+* Thu Dec  8 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.17-1
+- New upstream release
+
+* Mon Oct 10 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.16-1
+- New upstream release
+
+* Thu Sep  8 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.15-1
+- New upstream release
+
+* Wed Jul  6 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.14-1
+- New upstream release
+- Addresses issue with certificate verification introduced in 3.4.12
+
+* Tue Jun  7 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.13-1
+- New upstream release (#1343258)
+- Addresses issue with setuid programs introduced in 3.4.12 (#1343342)
+
+* Fri May 20 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.12-1
+- New upstream release
+
+* Mon Apr 11 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.11-1
+- New upstream release
+
+* Fri Mar  4 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.10-1
+- New upstream release (#1314576)
+
+* Wed Feb  3 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.9-1
+- Fix broken key usage flags introduced in 3.4.8 (#1303355)
+
+* Mon Jan 11 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.8-1
+- New upstream release (#1297079)
+
+* Mon Nov 23 2015 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.7-1
+- New upstream release (#1284300)
+- Documentation updates (#1282864)
+- Adds interface to set unique IDs in certificates (#1281343)
+- Allow arbitrary key sizes with ARCFOUR (#1284401)
+
+* Wed Oct 21 2015 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.6-1
+- New upstream release (#1273672)
+- Enhances p11tool to write CKA_ISSUER and CKA_SERIAL_NUMBER (#1272178)
+
+* Tue Oct 20 2015 Adam Williamson <awilliam@redhat.com> - 3.4.5-2
+- fix interaction with Chrome 45+ (master secret extension) (#1273102)
+
+* Mon Sep 14 2015 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.5-1
+- New upstream release (#1252192)
+- Eliminates hard limits on CRL parsing of certtool.
+
+* Mon Aug 10 2015 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.4-1
+- new upstream release
+- no longer requires trousers patch
+- fixes issue in gnutls_x509_privkey_import (#1250020)
+
+* Mon Jul 13 2015 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.3-2
+- Don't link against trousers but rather dlopen() it when available.
+  That avoids a dependency on openssl by the main library.
+
+* Mon Jul 13 2015 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.3-1
+- new upstream release
+
+* Thu Jul 02 2015 Adam Jackson <ajax@redhat.com> 3.4.2-3
+- Only disable -z now for the guile modules
+
+* Thu Jun 18 2015 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.2-2
+- rename the symbol version for internal symbols to avoid clashes
+  with 3.3.x.
+
+* Wed Jun 17 2015 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.2-1
+- new upstream release
+
+* Tue May  5 2015 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.1-2
+- Provide missing GNUTLS_SUPPLEMENTAL_USER_MAPPING_DATA definition
+
+* Mon May  4 2015 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.1-1
+- new upstream release
+
+* Sat May 02 2015 Kalev Lember <kalevlember@gmail.com> - 3.3.14-2
+- Rebuilt for GCC 5 C++11 ABI change
+
+* Mon Mar 30 2015 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.14-1
+- new upstream release
+- improved BER decoding of PKCS #12 structures (#1131461)
+
+* Fri Mar  6 2015 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.13-3
+- Build with hardened flags
+- Removed -Wl,--no-add-needed linker flag
+
+* Fri Feb 27 2015 Till Maas <opensource@till.name> - 3.3.13-2
+- Do not build with hardened flags
+
+* Thu Feb 26 2015 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.13-1
+- new upstream release
+
+* Sat Feb 21 2015 Till Maas <opensource@till.name> - 3.3.12-3
+- Make build verbose
+- Use %%license
+
+* Sat Feb 21 2015 Till Maas <opensource@till.name> - 3.3.12-2
+- Rebuilt for Fedora 23 Change
+  https://fedoraproject.org/wiki/Changes/Harden_all_packages_with_position-independent_code
+
+* Mon Jan 19 2015 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.12-1
+- new upstream release
+
+* Mon Jan  5 2015 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.11-2
+- enabled guile bindings (#1177847)
+
+* Thu Dec 11 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.11-1
+- new upstream release
+
+* Mon Nov 10 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.10-1
+- new upstream release
+
+* Thu Oct 23 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.9-2
+- applied fix for issue in get-issuer (#1155901)
+
+* Mon Oct 13 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.9-1
+- new upstream release
+
+* Fri Sep 19 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.8-2
+- strip rpath from library
+
+* Thu Sep 18 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.8-1
+- new upstream release
+
+* Mon Aug 25 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.7-1
+- new upstream release
+
+* Sat Aug 16 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 3.3.6-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_22_Mass_Rebuild
+
+* Wed Jul 23 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.6-1
+- new upstream release
+
+* Tue Jul 01 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.5-2
+- Added work-around for s390 builds with gcc 4.9 (#1102324)
+
+* Mon Jun 30 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.5-1
+- new upstream release
+
+* Tue Jun 17 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.4-3
+- explicitly depend on p11-kit-trust
+
+* Sat Jun 07 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 3.3.4-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
+
+* Mon Jun 02 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.4-1
+- new upstream release
+
+* Fri May 30 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.3-1
+- new upstream release
+
+* Wed May 21 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.2-2
+- Require crypto-policies
+
+* Fri May 09 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.2-1
+- new upstream release
+
+* Mon May 05 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.1-4
+- Replaced /etc/crypto-profiles/apps with /etc/crypto-policies/back-ends.
+- Added support for "very weak" profile.
+
+* Mon Apr 28 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.1-2
+- gnutls_global_deinit() will not do anything if the previous 
+  initialization has failed (#1091053)
+
+* Mon Apr 28 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.1-1
+- new upstream release
+
+* Mon Apr 14 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.3.0-1
+- new upstream release
+
+* Tue Apr 08 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.2.13-1
+- new upstream release
+
+* Wed Mar 05 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.2.12.1-1
+- new upstream release
+
+* Mon Mar 03 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.2.12-1
+- new upstream release
+
+* Mon Feb 03 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.2.10-2
+- use p11-kit trust store for certificate verification
+
+* Mon Feb 03 2014 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.2.10-1
+- new upstream release
+
+* Tue Jan 14 2014 Tomáš Mráz <tmraz@redhat.com> 3.2.8-2
+- build the crywrap tool
+
+* Mon Dec 23 2013 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.2.8-1
+- new upstream release
+
+* Wed Dec  4 2013 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.2.7-2
+- Use the correct root key for unbound /var/lib/unbound/root.key (#1012494)
+- Pull asm fixes from upstream (#973210)
+
+* Mon Nov 25 2013 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.2.7-1
+- new upstream release
+- added dependency to autogen-libopts-devel to use the system's
+  libopts library
+- added dependency to trousers-devel to enable TPM support
+
+* Mon Nov  4 2013 Tomáš Mráz <tmraz@redhat.com> 3.1.16-1
+- new upstream release
+- fixes CVE-2013-4466 off-by-one in dane_query_tlsa()
+
+* Fri Oct 25 2013 Tomáš Mráz <tmraz@redhat.com> 3.1.15-1
+- new upstream release
+- fixes CVE-2013-4466 buffer overflow in handling DANE entries
+
+* Wed Oct 16 2013 Tomáš Mráz <tmraz@redhat.com> 3.1.13-3
+- enable ECC NIST Suite B curves
+
+* Sat Aug 03 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 3.1.13-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
+
+* Mon Jul 15 2013 Tomáš Mráz <tmraz@redhat.com> 3.1.13-1
+- new upstream release
+
+* Mon May 13 2013 Tomáš Mráz <tmraz@redhat.com> 3.1.11-1
+- new upstream release
+
+* Mon Mar 25 2013 Tomas Mraz <tmraz@redhat.com> 3.1.10-1
+- new upstream release
+- license of the library is back to LGPLv2.1+
+
+* Fri Mar 15 2013 Tomas Mraz <tmraz@redhat.com> 3.1.9-1
+- new upstream release
+
+* Thu Mar  7 2013 Tomas Mraz <tmraz@redhat.com> 3.1.8-3
+- drop the temporary old library
+
+* Tue Feb 26 2013 Tomas Mraz <tmraz@redhat.com> 3.1.8-2
+- don't send ECC algos as supported (#913797)
+
+* Thu Feb 21 2013 Tomas Mraz <tmraz@redhat.com> 3.1.8-1
+- new upstream version
+
+* Wed Feb  6 2013 Tomas Mraz <tmraz@redhat.com> 3.1.7-1
+- new upstream version, requires rebuild of dependencies
+- this release temporarily includes old compatibility .so
+
+* Tue Feb  5 2013 Tomas Mraz <tmraz@redhat.com> 2.12.22-2
+- rebuilt with new libtasn1
+- make guile bindings optional - breaks i686 build and there is
+  no dependent package
+
+* Tue Jan  8 2013 Tomas Mraz <tmraz@redhat.com> 2.12.22-1
+- new upstream version
+
+* Wed Nov 28 2012 Tomas Mraz <tmraz@redhat.com> 2.12.21-2
+- use RSA bit sizes supported by libgcrypt in FIPS mode for security
+  levels (#879643)
+
+* Fri Nov  9 2012 Tomas Mraz <tmraz@redhat.com> 2.12.21-1
+- new upstream version
+
+* Thu Nov  1 2012 Tomas Mraz <tmraz@redhat.com> 2.12.20-4
+- negotiate only FIPS approved algorithms in the FIPS mode (#871826)
+
+* Wed Aug  8 2012 Tomas Mraz <tmraz@redhat.com> 2.12.20-3
+- fix the gnutls-cli-debug manpage - patch by Peter Schiffer
+
+* Thu Jul 19 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.12.20-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_18_Mass_Rebuild
+
+* Mon Jun 18 2012 Tomas Mraz <tmraz@redhat.com> 2.12.20-1
+- new upstream version
+
+* Fri May 18 2012 Tomas Mraz <tmraz@redhat.com> 2.12.19-1
+- new upstream version
+
+* Thu Mar 29 2012 Tomas Mraz <tmraz@redhat.com> 2.12.18-1
+- new upstream version
+
+* Thu Mar  8 2012 Tomas Mraz <tmraz@redhat.com> 2.12.17-1
+- new upstream version
+- fix leaks in key generation (#796302)
+
+* Fri Feb 03 2012 Kevin Fenzi <kevin@scrye.com> - 2.12.14-3
+- Disable largefile on arm arch. (#787287)
+
+* Fri Jan 13 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.12.14-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_17_Mass_Rebuild
+
+* Tue Nov  8 2011 Tomas Mraz <tmraz@redhat.com> 2.12.14-1
+- new upstream version
+
+* Mon Oct 24 2011 Tomas Mraz <tmraz@redhat.com> 2.12.12-1
+- new upstream version
+
+* Thu Sep 29 2011 Tomas Mraz <tmraz@redhat.com> 2.12.11-1
+- new upstream version
+
+* Fri Aug 26 2011 Tomas Mraz <tmraz@redhat.com> 2.12.9-1
+- new upstream version
+
+* Tue Aug 16 2011 Tomas Mraz <tmraz@redhat.com> 2.12.8-1
+- new upstream version
+
+* Mon Jul 25 2011 Tomas Mraz <tmraz@redhat.com> 2.12.7-2
+- fix problem when using new libgcrypt
+- split libgnutlsxx to a subpackage (#455146)
+- drop libgnutls-openssl (#460310)
+
+* Tue Jun 21 2011 Tomas Mraz <tmraz@redhat.com> 2.12.7-1
+- new upstream version
+
+* Mon May  9 2011 Tomas Mraz <tmraz@redhat.com> 2.12.4-1
+- new upstream version
+
+* Tue Apr 26 2011 Tomas Mraz <tmraz@redhat.com> 2.12.3-1
+- new upstream version
+
+* Mon Apr 18 2011 Tomas Mraz <tmraz@redhat.com> 2.12.2-1
+- new upstream version
+
+* Thu Mar  3 2011 Tomas Mraz <tmraz@redhat.com> 2.10.5-1
+- new upstream version
+
+* Tue Feb 08 2011 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.10.4-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_15_Mass_Rebuild
+
+* Wed Dec  8 2010 Tomas Mraz <tmraz@redhat.com> 2.10.4-1
+- new upstream version
+
+* Thu Dec  2 2010 Tomas Mraz <tmraz@redhat.com> 2.10.3-2
+- fix buffer overflow in gnutls-serv (#659259)
+
+* Fri Nov 19 2010 Tomas Mraz <tmraz@redhat.com> 2.10.3-1
+- new upstream version
+
+* Thu Sep 30 2010 Tomas Mraz <tmraz@redhat.com> 2.10.2-1
+- new upstream version
+
+* Wed Sep 29 2010 jkeating - 2.10.1-4
+- Rebuilt for gcc bug 634757
+
+* Thu Sep 23 2010 Tomas Mraz <tmraz@redhat.com> 2.10.1-3
+- more patching for internal errors regression (#629858)
+  patch by Vivek Dasmohapatra
+
+* Tue Sep 21 2010 Tomas Mraz <tmraz@redhat.com> 2.10.1-2
+- backported patch from upstream git hopefully fixing internal errors
+  (#629858)
+
+* Wed Aug  4 2010 Tomas Mraz <tmraz@redhat.com> 2.10.1-1
+- new upstream version
+
+* Wed Jun  2 2010 Tomas Mraz <tmraz@redhat.com> 2.8.6-2
+- add support for safe renegotiation CVE-2009-3555 (#533125)
+
+* Wed May 12 2010 Tomas Mraz <tmraz@redhat.com> 2.8.6-1
+- upgrade to a new upstream version
+
+* Mon Feb 15 2010 Rex Dieter <rdieter@fedoraproject.org> 2.8.5-4
+- FTBFS gnutls-2.8.5-3.fc13: ImplicitDSOLinking (#564624)
 
 * Thu Jan 28 2010 Tomas Mraz <tmraz@redhat.com> 2.8.5-3
 - drop superfluous rpath from binaries
@@ -451,8 +823,8 @@ install %{SOURCE3} $RPM_BUILD_ROOT/etc/ld.so.conf.d/compat-gnutls34.conf
 * Thu Jan 17 2002 Nalin Dahyabhai <nalin@redhat.com> 0.3.2-1
 - update to 0.3.2
 
-* Wed Jan 10 2002 Nalin Dahyabhai <nalin@redhat.com> 0.3.0-1
+* Thu Jan 10 2002 Nalin Dahyabhai <nalin@redhat.com> 0.3.0-1
 - add a URL
 
-* Wed Dec 20 2001 Nalin Dahyabhai <nalin@redhat.com>
+* Thu Dec 20 2001 Nalin Dahyabhai <nalin@redhat.com>
 - initial package
