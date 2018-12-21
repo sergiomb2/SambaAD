@@ -6,7 +6,7 @@
 # ctdb is enabled by default, you can disable it with: --without clustering
 %bcond_without clustering
 
-%define main_release 1
+%define main_release 2
 
 %define samba_version 4.8.8
 %define talloc_version 2.1.11
@@ -18,9 +18,9 @@
 %define pre_release %nil
 
 %if "x%{?pre_release}" != "x"
-%define samba_release 0.%{main_release}.%{pre_release}%{?dist}
+%define samba_release 0.%{main_release}.%{pre_release}
 %else
-%define samba_release %{main_release}%{?dist}
+%define samba_release %{main_release}
 %endif
 
 # This is a network daemon, do a hardened build
@@ -64,7 +64,7 @@
 %global libwbc_alternatives_suffix -64
 %endif
 
-%global with_mitkrb5 1
+%global with_mitkrb5 0
 %global with_dc 1
 
 %if %{with testsuite}
@@ -85,7 +85,7 @@
 
 Name:           samba
 Version:        %{samba_version}
-Release:        %{samba_release}
+Release:        %{samba_release}%{?dist}
 
 %if 0%{?rhel}
 Epoch:          1
@@ -1618,9 +1618,9 @@ fi
 %{_sbindir}/samba_gpoupdate
 %{_sbindir}/samba_spnupdate
 %{_sbindir}/samba_upgradedns
-
+%if %with_mitkrb5
 %{_libdir}/krb5/plugins/kdb/samba.so
-
+%endif
 %{_libdir}/samba/auth/samba4.so
 %{_libdir}/samba/libpac-samba4.so
 %dir %{_libdir}/samba/gensec
@@ -1896,6 +1896,34 @@ fi
 %{_libdir}/samba/libshares-samba4.so
 %{_libdir}/samba/libsmbpasswdparser-samba4.so
 %{_libdir}/samba/libxattr-tdb-samba4.so
+%if ! %with_mitkrb5
+%{_libdir}/samba/libHDB-SAMBA4-samba4.so
+%{_libdir}/samba/libasn1-samba4.so.8
+%{_libdir}/samba/libasn1-samba4.so.8.0.0
+%{_libdir}/samba/libcom_err-samba4.so.0
+%{_libdir}/samba/libcom_err-samba4.so.0.25
+%{_libdir}/samba/libgssapi-samba4.so.2
+%{_libdir}/samba/libgssapi-samba4.so.2.0.0
+%{_libdir}/samba/libhcrypto-samba4.so.5
+%{_libdir}/samba/libhcrypto-samba4.so.5.0.1
+%{_libdir}/samba/libhdb-samba4.so.11
+%{_libdir}/samba/libhdb-samba4.so.11.0.2
+%{_libdir}/samba/libheimbase-samba4.so.1
+%{_libdir}/samba/libheimbase-samba4.so.1.0.0
+%{_libdir}/samba/libheimntlm-samba4.so.1
+%{_libdir}/samba/libheimntlm-samba4.so.1.0.1
+%{_libdir}/samba/libhx509-samba4.so.5
+%{_libdir}/samba/libhx509-samba4.so.5.0.0
+%{_libdir}/samba/libkdc-samba4.so.2
+%{_libdir}/samba/libkdc-samba4.so.2.0.0
+%{_libdir}/samba/libkrb5-samba4.so.26
+%{_libdir}/samba/libkrb5-samba4.so.26.0.0
+%{_libdir}/samba/libroken-samba4.so.19
+%{_libdir}/samba/libroken-samba4.so.19.0.1
+%{_libdir}/samba/libwind-samba4.so.0
+%{_libdir}/samba/libwind-samba4.so.0.0.0
+%endif
+
 
 ### LIBSMBCLIENT
 %if %with_libsmbclient
@@ -2326,10 +2354,12 @@ fi
 %defattr(-,root,root)
 %{_bindir}/ntlm_auth
 %{_bindir}/wbinfo
+%if %with_mitkrb5
 %{_libdir}/samba/krb5/winbind_krb5_localauth.so
+%{_mandir}/man8/winbind_krb5_localauth.8*
+%endif
 %{_mandir}/man1/ntlm_auth.1.gz
 %{_mandir}/man1/wbinfo.1*
-%{_mandir}/man8/winbind_krb5_localauth.8*
 
 ### WINBIND-KRB5-LOCATOR
 %files winbind-krb5-locator
@@ -3174,7 +3204,10 @@ fi
 %endif # with_clustering_support
 
 %changelog
-* Thu Dec 20 2018 Sérgio Basto <sergio@serjux.com> - 1:4.8.8-1.1
+* Fri Dec 21 2018 Sérgio Basto <sergio@serjux.com> - 1:4.8.8-2
+- Disable MIT Kerberos still expermental, still have limitations and issues
+
+* Thu Dec 20 2018 Sérgio Basto <sergio@serjux.com> - 1:4.8.8-1
 - Update to 4.8.8
 
 * Thu Dec 20 2018 Sérgio Basto <sergio@serjux.com> - 1:4.8.6-2
