@@ -207,19 +207,10 @@ BuildRequires: glusterfs-devel >= 3.4.0.16
 BuildRequires: libcephfs-devel
 %endif
 
-%if %{with_dc}
-BuildRequires: compat-gnutls34-devel >= 3.4.7
-BuildRequires: compat-nettle32-devel >= 3.1.1
-
-# Required by samba-tool to run tests
-BuildRequires: python2-crypto
-%endif
-
 # pidl requirements
 BuildRequires: perl(Parse::Yapp)
 
 %if ! %with_internal_talloc
-
 BuildRequires: libtalloc-devel >= %{talloc_version}
 BuildRequires: pytalloc-devel >= %{talloc_version}
 %else
@@ -230,7 +221,6 @@ Obsoletes:  pytalloc <= %{talloc_version}
 %endif
 
 %if ! %with_internal_tevent
-
 BuildRequires: libtevent-devel >= %{tevent_version}
 BuildRequires: python-tevent >= %{tevent_version}
 %else
@@ -270,6 +260,16 @@ BuildRequires: python2-markdown
 %if %{with_dc}
 BuildRequires: krb5-server >= %{required_mit_krb5}
 BuildRequires: bind
+%if 0%{?rhel}
+BuildRequires: compat-gnutls34-devel >= 3.4.7
+BuildRequires: compat-nettle32-devel >= 3.1.1
+%else
+BuildRequires: gnutls-devel >= 3.4.7
+BuildRequires: nettle-devel >= 3.1.1
+%endif
+
+# Required by samba-tool to run tests
+BuildRequires: python2-crypto
 %endif
 
 # filter out perl requirements pulled in from examples in the docdir.
@@ -752,7 +752,11 @@ Summary: CTDB clustered database test suite
 Requires: samba-client-libs = %{samba_depver}
 
 Requires: ctdb = %{samba_depver}
+%if 0%{?rhel}
 Requires: nc
+%else
+Recommends: nc
+%endif
 
 Provides: ctdb-devel = %{samba_depver}
 Obsoletes: ctdb-devel < %{samba_depver}
@@ -815,7 +819,11 @@ xzcat %{SOURCE0} | gpgv2 --quiet --keyring %{SOURCE2} %{SOURCE1} -
 
 %global _samba_private_libraries %{_libsmbclient}%{_libwbclient}
 
+%if 0%{?rhel}
 export PKG_CONFIG_PATH=%{_libdir}/compat-gnutls34/pkgconfig:%{_libdir}/compat-nettle32/pkgconfig
+%endif
+
+/usr/bin/pkg-config "gnutls >= 3.4.7" --cflags --libs gnutls
 
 %configure \
         --enable-fhs \

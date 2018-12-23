@@ -12,7 +12,11 @@ BuildRequires: p11-kit-devel >= 0.21.3, gettext-devel
 BuildRequires: zlib-devel, readline-devel, libtasn1-devel >= 4.3
 BuildRequires: libtool, automake, autoconf, texinfo
 BuildRequires: autogen-libopts-devel >= 5.18 autogen
+%if 0%{?rhel}
 BuildRequires: compat-nettle32-devel >= 3.1.1
+%else
+BuildRequires: nettle32-devel >= 3.1.1
+%endif
 BuildRequires: trousers-devel >= 0.3.11.2
 BuildRequires: libidn-devel
 BuildRequires: gperf, net-tools, softhsm, datefudge
@@ -32,9 +36,7 @@ URL: http://www.gnutls.org/
 #Source1: ftp://ftp.gnutls.org/gcrypt/gnutls/%{name}-%{version}.tar.xz.sig
 # XXX patent tainted code removed.
 Source0: gnutls-%{version}-hobbled.tar.xz
-#Source1: libgnutls-config
 Source2: hobble-gnutls
-#Source3: compat-gnutls34.conf
 Patch1: gnutls-3.2.7-rpath.patch
 Patch3: gnutls-3.1.11-nosrp.patch
 Patch4: gnutls-3.4.1-default-policy.patch
@@ -57,6 +59,9 @@ Requires: %{name}-c++%{?_isa} = %{version}-%{release}
 Requires: %{name}-dane%{?_isa} = %{version}-%{release}
 %endif
 Requires: pkgconfig
+Requires: libtasn1-devel >= 4.3
+Requires: libidn-devel
+Requires: p11-kit-devel >= 0.21.3
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 

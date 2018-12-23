@@ -1,3 +1,10 @@
+Since Samba 4.7.0 you may run Samba AD DC with MIT Kerberos KDC [1]
+But using MIT Kerberos is still considered experimental. So MIT Kerberos was
+disable.
+
+[1]
+https://wiki.samba.org/index.php/Running_a_Samba_AD_DC_with_MIT_Kerberos_KDC
+
 MIT Kerberos 5 Support
 =======================
 
