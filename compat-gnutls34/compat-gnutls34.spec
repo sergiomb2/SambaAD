@@ -4,7 +4,7 @@
 Summary: A TLS protocol implementation
 Name: compat-gnutls34
 Version: 3.4.17
-Release: 4%{?dist}
+Release: 5%{?dist}
 # The libraries are LGPLv2.1+, utilities are GPLv3+
 License: GPLv3+ and LGPLv2+
 Group: System Environment/Libraries
@@ -274,6 +274,10 @@ make check %{?_smp_mflags}
 %endif
 
 %changelog
+* Thu Feb 21 2019 Sérgio Basto <sergio@serjux.com> - 3.4.17-5
+- Devel package need libtasn1-devel, libtasn1-devel, libidn-devel
+  and p11-kit-devel
+
 * Wed Dec 19 2018 Sérgio Basto <sergio@serjux.com> - 3.4.17-4
 - Rewrite compat package
 
