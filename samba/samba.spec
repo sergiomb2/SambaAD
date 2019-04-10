@@ -6,7 +6,7 @@
 # ctdb is enabled by default, you can disable it with: --without clustering
 %bcond_without clustering
 
-%define main_release 2
+%define main_release 3
 
 %define samba_version 4.8.8
 %define talloc_version 2.1.11
@@ -968,15 +968,6 @@ install -m 0644 %{SOURCE200} packaging/README.dc
 install -m 0644 %{SOURCE200} packaging/README.dc-libs
 %endif
 
-#install -d -m 0755 %{buildroot}%{_unitdir}
-#services="nmb smb winbind"
-#if %{with_dc}
-#services="$services samba"
-#endif
-#for i in $services ; do
-#    cat packaging/systemd/$i.service | sed -e 's@\[Service\]@[Service]\nEnvironment=KRB5CCNAME=FILE:/run/samba/krb5cc_samba@g' >tmp$i.service
-#    install -m 0644 tmp$i.service %{buildroot}%{_unitdir}/$i.service
-#done
 %if %with_clustering_support
 install -m 0644 ctdb/config/ctdb.service %{buildroot}%{_unitdir}
 %endif
@@ -3212,6 +3203,10 @@ fi
 %endif # with_clustering_support
 
 %changelog
+* Thu Feb 21 2019 Sérgio Basto <sergio@serjux.com> - 1:4.8.8-3
+- Review ldb modules rhbz #1497018, the quick fix is:
+  ln -s /usr/lib64/ldb/modules/ldb/memberof.so /usr/lib64/samba/ldb/
+
 * Fri Dec 21 2018 Sérgio Basto <sergio@serjux.com> - 1:4.8.8-2
 - Disable MIT Kerberos still expermental, still have limitations and issues
 

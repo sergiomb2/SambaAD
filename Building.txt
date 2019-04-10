@@ -1,0 +1,24 @@
+New method:
+
+cd compat-gnutls34
+rpmbuild -bs compat-gnutls34.spec  --define "_sourcedir ." --define "_srcrpmdir ." && mock -r epel-7-x86_64 --no-clean --rebuild ./compat-gnutls34-3.4.17-5.el7.src.rpm
+
+cd ../../localrepo2
+mock -r epel-7-x86_64 --no-clean --install compat-gnutls34-3.4.17-5.el7.x86_64.rpm compat-gnutls34-devel-3.4.17-5.el7.x86_64.rpm  compat-nettle32-devel-3.2-3.el7.x86_64.rpm compat-nettle32-3.2-3.el7.x86_64.rpm compat-gnutls34-dane-3.4.17-5.el7.x86_64.rpm compat-gnutls34-c++-3.4.17-5.el7.x86_64.rpm
+cd samba/
+
+rpmbuild -bs samba.spec  --define "_sourcedir ." --define "_srcrpmdir ." && mock -r epel-7-x86_64 --no-clean --rebuild  ./samba-4.8.8-3.el7.src.rpm
+
+
+Old method:
+
+rpmbuild -bs SPECS/nettle.spec && mock -r epel-7-x86_64 --clean --rebuild  SRPMS/nettle-3.2-2.el7.centos.src.rpm
+
+mock -r epel-7-x86_64 --install /var/lib/mock/epel-7-x86_64/result/nettle-devel-3.2-2.el7.x86_64.rpm /var/lib/mock/epel-7-x86_64/result/nettle-3.2-2.el7.x86_64.rpm
+
+rpmbuild -bs SPECS/gnutls.spec && mock -r epel-7-x86_64 --no-clean --rebuild SRPMS/gnutls-3.4.17-2.el7.centos.src.rpm 
+
+mock -r epel-7-x86_64 --no-clean --install /var/lib/mock/epel-7-x86_64/result/gnutls-devel-3.4.17-2.el7.x86_64.rpm /var/lib/mock/epel-7-x86_64/result/gnutls-3.4.17-2.el7.x86_64.rpm /var/lib/mock/epel-7-x86_64/result/gnutls-c++-3.4.17-2.el7.x86_64.rpm /var/lib/mock/epel-7-x86_64/result/gnutls-dane-3.4.17-2.el7.x86_64.rpm 
+
+rpmbuild -bs SPECS/samba.spec && mock -r epel-7-x86_64 --no-clean --rebuild  SRPMS/samba-4.7.7-0.el7.centos.src.rpm 
+
