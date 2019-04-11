@@ -6,13 +6,13 @@
 # ctdb is enabled by default, you can disable it with: --without clustering
 %bcond_without clustering
 
-%define main_release 3
+%define main_release 1
 
-%define samba_version 4.8.8
+%define samba_version 4.8.11
 %define talloc_version 2.1.11
 %define tdb_version 1.3.15
 %define tevent_version 0.9.36
-%define ldb_version 1.3.6
+%define ldb_version 1.3.8
 
 # This should be rc1 or nil
 %define pre_release %nil
@@ -103,10 +103,7 @@ Summary:        Server and Client software to interoperate with Windows machines
 License:        GPLv3+ and LGPLv3+
 URL:            http://www.samba.org/
 
-# This is a xz recompressed file of https://ftp.samba.org/pub/samba/samba-%%{version}%%{pre_release}.tar.gz
-# gunzip SOURCES/samba-4.8.8.tar.gz
-# xz SOURCES/samba-4.8.8.tar
-Source0:        samba-%{version}%{pre_release}.tar.xz
+Source0:        https://ftp.samba.org/pub/samba/samba-%{version}%{pre_release}.tar.gz
 Source1:        https://ftp.samba.org/pub/samba/samba-%{version}%{pre_release}.tar.asc
 Source2:        gpgkey-52FBC0B86D954B0843324CDC6F33915B6568B7EA.gpg
 
@@ -772,7 +769,7 @@ and use CTDB instead.
 
 
 %prep
-xzcat %{SOURCE0} | gpgv2 --quiet --keyring %{SOURCE2} %{SOURCE1} -
+zcat %{SOURCE0} | gpgv2 --quiet --keyring %{SOURCE2} %{SOURCE1} -
 %autosetup -n samba-%{version}%{pre_release} -p1
 
 %build
@@ -1866,7 +1863,9 @@ fi
 %if %{with_vfs_glusterfs}
 %files vfs-glusterfs
 %{_libdir}/samba/vfs/glusterfs.so
+%{_libdir}/samba/vfs/glusterfs_fuse.so
 %{_mandir}/man8/vfs_glusterfs.8*
+%{_mandir}/man8/vfs_glusterfs_fuse.8*
 %endif
 
 ### KRB5-PRINTING
@@ -2478,6 +2477,7 @@ fi
 %{_bindir}/ctdb_run_tests
 %{_bindir}/ctdb_run_cluster_tests
 
+
 %dir %{_libexecdir}/ctdb
 %dir %{_libexecdir}/ctdb/tests
 %{_libexecdir}/ctdb/tests/comm_client_test
@@ -2521,6 +2521,7 @@ fi
 %{_libexecdir}/ctdb/tests/tunnel_test
 %{_libexecdir}/ctdb/tests/update_record
 %{_libexecdir}/ctdb/tests/update_record_persistent
+%{_libexecdir}/ctdb/tests/line_test
 
 %dir %{_datadir}/ctdb
 %dir %{_datadir}/ctdb/tests
@@ -2572,6 +2573,7 @@ fi
 %{_datadir}/ctdb/tests/cunit/sock_daemon_test_001.sh
 %{_datadir}/ctdb/tests/cunit/sock_io_test_001.sh
 %{_datadir}/ctdb/tests/cunit/srvid_test_001.sh
+%{_datadir}/ctdb/tests/cunit/line_test_001.sh
 
 %dir %{_datadir}/ctdb/tests/eventd
 %{_datadir}/ctdb/tests/eventd/README
@@ -3203,6 +3205,9 @@ fi
 %endif # with_clustering_support
 
 %changelog
+* Thu Apr 11 2019 Sérgio Basto <sergio@serjux.com> - 1:4.8.11-1
+- Update to 4.8.11
+
 * Thu Feb 21 2019 Sérgio Basto <sergio@serjux.com> - 1:4.8.8-3
 - Review ldb modules rhbz #1497018, the quick fix is:
   ln -s /usr/lib64/ldb/modules/ldb/memberof.so /usr/lib64/samba/ldb/
