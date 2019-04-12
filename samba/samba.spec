@@ -6,7 +6,7 @@
 # ctdb is enabled by default, you can disable it with: --without clustering
 %bcond_without clustering
 
-%define main_release 1
+%define main_release 2
 
 %define samba_version 4.8.11
 %define talloc_version 2.1.11
@@ -159,6 +159,7 @@ BuildRequires: docbook-style-xsl
 BuildRequires: e2fsprogs-devel
 BuildRequires: gawk
 BuildRequires: gnupg2
+BuildRequires: jansson-devel
 BuildRequires: krb5-devel >= %{required_mit_krb5}
 BuildRequires: libacl-devel
 BuildRequires: libaio-devel
@@ -3205,6 +3206,9 @@ fi
 %endif # with_clustering_support
 
 %changelog
+* Fri Apr 12 2019 Sérgio Basto <sergio@serjux.com> - 1:4.8.11-2
+- Enable HAVE_JSON_OBJECT
+
 * Thu Apr 11 2019 Sérgio Basto <sergio@serjux.com> - 1:4.8.11-1
 - Update to 4.8.11
 
