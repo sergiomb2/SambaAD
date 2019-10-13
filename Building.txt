@@ -9,6 +9,10 @@ cd samba/
 
 rpmbuild -bs samba.spec  --define "_sourcedir ." --define "_srcrpmdir ." && mock -r epel-7-x86_64 --no-clean --rebuild  ./samba-4.8.8-3.el7.src.rpm
 
+Enviar para o copr.fedoraproect.org
+
+
+rpmbuild -bs SPECS/samba.spec && copr-cli build sergiomb/SambaAD  SRPMS/samba-4.8.8-2.el7.src.rpm
 
 Old method:
 
