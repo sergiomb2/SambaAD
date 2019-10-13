@@ -44,14 +44,10 @@
 %endif
 %endif
 
-%global with_vfs_glusterfs 1
-%if 0%{?rhel}
+# Disabled errors in all rawhide and f31, in all i386 and in some ppc64le (F30+)
 %global with_vfs_glusterfs 0
-# Only enable on x86_64
-%ifarch x86_64
-%global with_vfs_glusterfs 1
-%endif
-%endif
+# GlusterFS is a distributed file-system capable of scaling to several
+# petabytes
 
 %global with_intel_aes_accel 0
 %ifarch x86_64
@@ -1268,6 +1264,7 @@ fi
 %{_libdir}/samba/vfs/virusfilter.so
 %{_libdir}/samba/vfs/worm.so
 %{_libdir}/samba/vfs/xattr_tdb.so
+%{_libdir}/samba/vfs/glusterfs_fuse.so
 
 %{_unitdir}/nmb.service
 %{_unitdir}/smb.service
@@ -1321,13 +1318,13 @@ fi
 %{_mandir}/man8/vfs_virusfilter.8*
 %{_mandir}/man8/vfs_worm.8*
 %{_mandir}/man8/vfs_xattr_tdb.8*
-
 %if ! %{with_vfs_glusterfs}
-%exclude %{_mandir}/man8/vfs_glusterfs.8*
+%{_mandir}/man8/vfs_glusterfs.8*
 %endif
+%{_mandir}/man8/vfs_glusterfs_fuse.8*
 
 %if ! %{with_vfs_cephfs}
-%exclude %{_mandir}/man8/vfs_ceph.8*
+%{_mandir}/man8/vfs_ceph.8*
 %endif
 
 %attr(775,root,printadmin) %dir /var/lib/samba/drivers
@@ -1869,9 +1866,7 @@ fi
 %if %{with_vfs_glusterfs}
 %files vfs-glusterfs
 %{_libdir}/samba/vfs/glusterfs.so
-%{_libdir}/samba/vfs/glusterfs_fuse.so
 %{_mandir}/man8/vfs_glusterfs.8*
-%{_mandir}/man8/vfs_glusterfs_fuse.8*
 %endif
 
 ### KRB5-PRINTING
