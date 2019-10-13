@@ -117,6 +117,7 @@ Source14:       samba.pamd
 Source200:      README.dc
 Source201:      README.downgrade
 
+BuildRequires: gcc
 BuildRequires: avahi-devel
 BuildRequires: cups-devel
 BuildRequires: dbus-devel
@@ -824,6 +825,9 @@ export PKG_CONFIG_PATH=%{_libdir}/compat-gnutls34/pkgconfig:%{_libdir}/compat-ne
 
 /usr/bin/pkg-config "gnutls >= 3.4.7" --cflags --libs gnutls
 
+# Avoid ./configure: line 16: python: command not found
+export PYTHON=%{__python2}
+
 %configure \
         --enable-fhs \
         --with-piddir=/run \
@@ -876,9 +880,9 @@ export PKG_CONFIG_PATH=%{_libdir}/compat-gnutls34/pkgconfig:%{_libdir}/compat-ne
 make %{?_smp_mflags}
 
 %install
+export PYTHON=%{__python2}
 make %{?_smp_mflags} install DESTDIR=%{buildroot}
 
-export PYTHON=%{__python2}
 # Workaround: make sure all general Python shebangs are pointing to Python 2
 # otherwise it will not work when default python is different from Python 2.
 # Samba tools aren't ready for Python 3 yet.
