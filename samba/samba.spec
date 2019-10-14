@@ -6,7 +6,7 @@
 # ctdb is enabled by default, you can disable it with: --without clustering
 %bcond_without clustering
 
-%define main_release 1
+%define main_release 2
 
 %define samba_version 4.8.12
 %define talloc_version 2.1.11
@@ -30,10 +30,10 @@
 %global with_libsmbclient 1
 %global with_libwbclient 1
 
-%global with_internal_talloc 1
-%global with_internal_tevent 1
-%global with_internal_tdb 1
-%global with_internal_ldb 1
+%global with_internal_talloc 0
+%global with_internal_tevent 0
+%global with_internal_tdb 0
+%global with_internal_ldb 0
 
 %global with_profiling 1
 
@@ -172,7 +172,7 @@ BuildRequires: libcephfs-devel
 # pidl requirements
 BuildRequires: perl(Parse::Yapp)
 
-%if ! %with_internal_talloc
+%if !%{with_internal_talloc}
 BuildRequires: libtalloc-devel >= %{talloc_version}
 BuildRequires: pytalloc-devel >= %{talloc_version}
 %else
@@ -182,7 +182,7 @@ Provides:  pytalloc = %{talloc_version}
 Obsoletes:  pytalloc <= %{talloc_version}
 %endif
 
-%if ! %with_internal_tevent
+%if !%{with_internal_tevent}
 BuildRequires: libtevent-devel >= %{tevent_version}
 BuildRequires: python-tevent >= %{tevent_version}
 %else
@@ -192,9 +192,10 @@ Provides: python-tevent = %{tevent_version}
 Obsoletes: python-tevent <= %{tevent_version}
 %endif
 
-%if ! %with_internal_ldb
+%if !%{with_internal_ldb}
 BuildRequires: libldb-devel >= %{ldb_version}
 BuildRequires: pyldb-devel >= %{ldb_version}
+BuildRequires: pyldb >= %{ldb_version}
 %else
 Provides: libldb = %{ldb_version}
 Obsoletes: libldb <= %{ldb_version}
@@ -202,7 +203,7 @@ Provides: pyldb = %{ldb_version}
 Obsoletes: pyldb <= %{ldb_version}
 %endif
 
-%if ! %with_internal_tdb
+%if !%{with_internal_tdb}
 BuildRequires: libtdb-devel >= %{tdb_version}
 BuildRequires: python-tdb >= %{tdb_version}
 %else
