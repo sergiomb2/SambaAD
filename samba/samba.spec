@@ -9,7 +9,7 @@
 %define talloc_version 2.1.16
 %define tdb_version 1.3.18
 %define tevent_version 0.9.39
-%define ldb_version 1.5.5
+%define ldb_version 1.5.6
 
 # This should be rc1 or nil
 %define pre_release %nil
@@ -60,18 +60,15 @@
 
 %global required_mit_krb5 1.15.1
 
-%global with_clustering_support 0
-
-%if %{with clustering}
-%global with_clustering_support 1
-%endif
-
-%{!?python2_sitearch: %define python2_sitearch %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
-
 %global _systemd_extra "Environment=KRB5CCNAME=FILE:/run/samba/krb5cc_samba"
 
+# filter out perl requirements pulled in from examples in the docdir.
+%global __requires_exclude_from ^%{_docdir}/.*$
+%global __provides_exclude_from ^%{_docdir}/.*$
+
+
 Name:           samba
-Version:        4.10.8
+Version:        4.10.9
 Release:        1%{?dist}
 Epoch:          3
 
@@ -221,11 +218,6 @@ BuildRequires: compat-nettle32-devel >= 3.1.1
 BuildRequires: gnutls-devel >= 3.4.7
 BuildRequires: nettle-devel >= 3.1.1
 %endif
-
-
-# filter out perl requirements pulled in from examples in the docdir.
-%global __requires_exclude_from ^%{_docdir}/.*$
-%global __provides_exclude_from ^%{_docdir}/.*$
 
 Requires(pre): /usr/sbin/groupadd
 Requires(post): systemd
@@ -696,7 +688,7 @@ The samba-winbind-modules package provides the NSS library and a PAM module
 necessary to communicate to the Winbind Daemon
 
 ### CTDB
-%if %with_clustering_support
+%if %{with clustering}
 %package -n ctdb
 Summary: A Clustered Database based on Samba's Trivial Database (TDB)
 
@@ -752,9 +744,7 @@ CTDB is a cluster implementation of the TDB database used by Samba and other
 projects to store temporary data. If an application is already using TDB for
 temporary data it is very easy to convert that application to be cluster aware
 and use CTDB instead.
-%endif # with_clustering_support
-
-
+%endif
 
 %prep
 zcat %{SOURCE0} | gpgv2 --quiet --keyring %{SOURCE2} %{SOURCE1} -
@@ -842,7 +832,7 @@ export PYTHON=%{__python2}
 %if ! %with_vfs_glusterfs
         --disable-glusterfs \
 %endif
-%if %with_clustering_support
+%if %{with clustering}
         --with-cluster-support \
 %endif
 %if %with_profiling
@@ -866,7 +856,7 @@ make %{?_smp_mflags}
 
 %install
 export PYTHON=%{__python2}
-make %{?_smp_mflags} install DESTDIR=%{buildroot}
+%make_install
 
 # Workaround: make sure all general Python shebangs are pointing to Python 2
 # otherwise it will not work when default python is different from Python 2.
@@ -934,13 +924,13 @@ install -d -m 0755 %{buildroot}%{_tmpfilesdir}
 install -m644 packaging/systemd/samba.conf.tmp %{buildroot}%{_tmpfilesdir}/samba.conf
 # create /run/samba too.
 echo "d /run/samba  755 root root" >> %{buildroot}%{_tmpfilesdir}/samba.conf
-%if %with_clustering_support
+%if %{with clustering}
 echo "d /run/ctdb 755 root root" >> %{buildroot}%{_tmpfilesdir}/ctdb.conf
 %endif
 
 install -d -m 0755 %{buildroot}%{_sysconfdir}/sysconfig
 install -m 0644 packaging/systemd/samba.sysconfig %{buildroot}%{_sysconfdir}/sysconfig/samba
-%if %with_clustering_support
+%if %{with clustering}
 cat > %{buildroot}%{_sysconfdir}/sysconfig/ctdb <<EOF
 # CTDB configuration is now in %{_sysconfdir}/ctdb/ctdbd.conf
 EOF
@@ -956,7 +946,7 @@ install -m 0644 %{SOURCE200} packaging/README.dc
 install -m 0644 %{SOURCE200} packaging/README.dc-libs
 %endif
 
-%if %with_clustering_support
+%if %{with clustering}
 install -m 0644 ctdb/config/ctdb.service %{buildroot}%{_unitdir}
 %endif
 
@@ -1176,7 +1166,7 @@ fi
 
 %postun winbind-modules -p /sbin/ldconfig
 
-%if %with_clustering_support
+%if %{with clustering}
 %post -n ctdb
 /usr/bin/systemd-tmpfiles --create %{_tmpfilesdir}/ctdb.conf
 %systemd_post ctdb.service
@@ -1377,7 +1367,10 @@ fi
 %{_bindir}/ldbsearch
 %{_libdir}/samba/libldb-cmdline-samba4.so
 %{_libdir}/samba/libldb-key-value-samba4.so
+%ifnarch i686
+# Unclear why this is not on i686,
 %{_libdir}/samba/libldb-mdb-int-samba4.so
+%endif
 %{_libdir}/samba/libldb-tdb-err-map-samba4.so
 %{_libdir}/samba/libldb-tdb-int-samba4.so
 %{_libdir}/samba/ldb/asq.so
@@ -2088,7 +2081,7 @@ fi
 %{_mandir}/man5/pam_winbind.conf.5*
 %{_mandir}/man8/pam_winbind.8*
 
-%if %with_clustering_support
+%if %{with clustering}
 %files -n ctdb
 %defattr(-,root,root)
 %doc ctdb/README
@@ -2165,6 +2158,10 @@ fi
 %endif # with_clustering_support
 
 %changelog
+* Thu Oct 17 2019 Sérgio Basto <sergio@serjux.com> - 3:4.10.9-1
+- New upstream version
+- More simplifications in spec file
+
 * Mon Oct 14 2019 Sérgio Basto <sergio@serjux.com> - 3:4.10.8-1
 - Update to 4.10.8
 
