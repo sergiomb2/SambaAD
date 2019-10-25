@@ -4,7 +4,7 @@
 Summary: A TLS protocol implementation
 Name: compat-gnutls34
 Version: 3.4.17
-Release: 5%{?dist}
+Release: 6%{?dist}
 # The libraries are LGPLv2.1+, utilities are GPLv3+
 License: GPLv3+ and LGPLv2+
 Group: System Environment/Libraries
@@ -32,8 +32,8 @@ BuildRequires: unbound-devel unbound-libs
 BuildRequires: guile-devel
 %endif
 URL: http://www.gnutls.org/
-#Source0: ftp://ftp.gnutls.org/gcrypt/gnutls/%{name}-%{version}.tar.xz
-#Source1: ftp://ftp.gnutls.org/gcrypt/gnutls/%{name}-%{version}.tar.xz.sig
+#Source0: ftp://ftp.gnutls.org/gcrypt/gnutls/%%{name}-%%{version}.tar.xz
+#Source1: ftp://ftp.gnutls.org/gcrypt/gnutls/%%{name}-%%{version}.tar.xz.sig
 # XXX patent tainted code removed.
 Source0: gnutls-%{version}-hobbled.tar.xz
 Source2: hobble-gnutls
@@ -62,6 +62,11 @@ Requires: pkgconfig
 Requires: libtasn1-devel >= 4.3
 Requires: libidn-devel
 Requires: p11-kit-devel >= 0.21.3
+%if 0%{?rhel}
+Requires: compat-nettle32-devel >= 3.1.1
+%else
+Requires: nettle-devel >= 3.1.1
+%endif
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 
@@ -274,6 +279,10 @@ make check %{?_smp_mflags}
 %endif
 
 %changelog
+* Fri Oct 25 2019 Sérgio Basto <sergio@serjux.com> - 3.4.17-6
+- compat-gnutls34-devel need requires compat-nettle32-devel or else pkg-config
+  gnutls won't work
+
 * Thu Feb 21 2019 Sérgio Basto <sergio@serjux.com> - 3.4.17-5
 - Devel package need libtasn1-devel, libtasn1-devel, libidn-devel
   and p11-kit-devel
