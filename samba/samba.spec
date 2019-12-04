@@ -68,8 +68,8 @@
 
 
 Name:           samba
-Version:        4.10.9
-Release:        1%{?dist}
+Version:        4.10.10
+Release:        2%{?dist}
 Epoch:          3
 
 %if 0%{?epoch} > 0
@@ -271,6 +271,10 @@ Requires: libsmbclient = %{samba_depver}
 %if %{with_internal_tdb}
 Provides: tdb-tools = %{tdb_version}
 Obsoletes: tdb-tools <= %{tdb_version}
+%endif
+%if %{with_internal_ldb}
+Provides: ldb-tools = %{ldb_version}
+Obsoletes: ldb-tools <= %{ldb_version}
 %endif
 
 Provides: samba4-client = %{samba_depver}
@@ -2158,6 +2162,12 @@ fi
 %endif # with_clustering_support
 
 %changelog
+* Thu Nov 28 2019 Sérgio Basto <sergio@serjux.com> - 3:4.10.10-2
+- Provides/Obsoletes ldb-tools
+
+* Wed Nov 27 2019 Sérgio Basto <sergio@serjux.com> - 3:4.10.10-1
+- Samba-4.10.10
+
 * Thu Oct 17 2019 Sérgio Basto <sergio@serjux.com> - 3:4.10.9-1
 - New upstream version
 - More simplifications in spec file
