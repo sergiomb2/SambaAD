@@ -69,7 +69,7 @@
 
 Name:           samba
 Version:        4.10.10
-Release:        2%{?dist}
+Release:        3%{?dist}
 Epoch:          3
 
 %if 0%{?epoch} > 0
@@ -106,7 +106,9 @@ BuildRequires: gawk
 BuildRequires: gnupg2
 BuildRequires: gpgme-devel
 BuildRequires: jansson-devel
+%if %{with_mitkrb5}
 BuildRequires: krb5-devel >= %{required_mit_krb5}
+%endif
 BuildRequires: libacl-devel
 BuildRequires: libaio-devel
 BuildRequires: libarchive-devel
@@ -205,7 +207,9 @@ BuildRequires: lmdb-devel
 %endif
 
 %if %{with_dc}
+%if %{with_mitkrb5}
 BuildRequires: krb5-server >= %{required_mit_krb5}
+%endif
 BuildRequires: bind
 # Required by samba-tool to run tests
 BuildRequires: python2-crypto
@@ -297,7 +301,9 @@ Requires: %{name}-common-libs = %{samba_depver}
 %if %with_libwbclient
 Requires: libwbclient = %{samba_depver}
 %endif
+%if %{with_mitkrb5}
 Requires: krb5-libs >= %{required_mit_krb5}
+%endif
 
 %description client-libs
 The samba-client-libs package contains internal libraries needed by the
@@ -371,7 +377,9 @@ Requires: python2-crypto
 Requires: python3-crypto
 Requires: python3-%{name} = %{samba_depver}
 %endif
+%if %{with_mitkrb5}
 Requires: krb5-server >= %{required_mit_krb5}
+%endif
 %endif
 
 Provides: samba4-dc = %{samba_depver}
@@ -2162,6 +2170,9 @@ fi
 %endif # with_clustering_support
 
 %changelog
+* Wed Dec 04 2019 Sérgio Basto <sergio@serjux.com> - 3:4.10.10-3
+- Disable deps with krb5-server
+
 * Thu Nov 28 2019 Sérgio Basto <sergio@serjux.com> - 3:4.10.10-2
 - Provides/Obsoletes ldb-tools
 
