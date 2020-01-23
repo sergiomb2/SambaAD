@@ -68,8 +68,8 @@
 
 
 Name:           samba
-Version:        4.10.10
-Release:        3%{?dist}
+Version:        4.10.12
+Release:        1%{?dist}
 Epoch:          3
 
 %if 0%{?epoch} > 0
@@ -2170,6 +2170,9 @@ fi
 %endif # with_clustering_support
 
 %changelog
+* Thu Jan 23 2020 Sérgio Basto <sergio@serjux.com> - 3:4.10.12-1
+- Samba-4.10.12
+
 * Wed Dec 04 2019 Sérgio Basto <sergio@serjux.com> - 3:4.10.10-3
 - Disable deps with krb5-server
 
