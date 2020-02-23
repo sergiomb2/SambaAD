@@ -68,7 +68,7 @@
 
 
 Name:           samba
-Version:        4.10.12
+Version:        4.10.13
 Release:        1%{?dist}
 Epoch:          3
 
@@ -2170,6 +2170,9 @@ fi
 %endif # with_clustering_support
 
 %changelog
+* Fri Jan 24 2020 Sérgio Basto <sergio@serjux.com> - 3:4.10.13-1
+- Samba-4.10.13
+
 * Thu Jan 23 2020 Sérgio Basto <sergio@serjux.com> - 3:4.10.12-1
 - Samba-4.10.12
 
