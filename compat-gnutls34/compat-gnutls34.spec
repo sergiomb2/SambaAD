@@ -4,7 +4,7 @@
 Summary: A TLS protocol implementation
 Name: compat-gnutls34
 Version: 3.4.17
-Release: 6%{?dist}
+Release: 7%{?dist}
 # The libraries are LGPLv2.1+, utilities are GPLv3+
 License: GPLv3+ and LGPLv2+
 Group: System Environment/Libraries
@@ -42,6 +42,9 @@ Patch3: gnutls-3.1.11-nosrp.patch
 Patch4: gnutls-3.4.1-default-policy.patch
 Patch5: gnutls-3.4.2-no-now-guile.patch
 Patch6: gnutls-3.4.17-various-flaws1.patch
+Patch7: 36_CVE-2017-7507_1-ext-status_request-ensure-response-IDs-are-properly-.patch
+Patch8: 36_CVE-2017-7507_2-ext-status_request-Removed-the-parsing-of-responder-.patch
+Patch9: 36_CVE-2017-7507_3-gnutls_ocsp_status_request_enable_client-documented-.patch
 
 # Wildcard bundling exception https://fedorahosted.org/fpc/ticket/174
 Provides: bundled(gnulib) = 20130424
@@ -154,6 +157,9 @@ This package contains Guile bindings for the library.
 %patch4 -p1 -b .default-policy
 %patch5 -p1 -b .guile
 %patch6 -p1 -b .various-flaws
+%patch7 -p1 -b .36_CVE-2017-7507_1
+%patch8 -p1 -b .36_CVE-2017-7507_2
+%patch9 -p1 -b .36_CVE-2017-7507_3
 
 sed 's/gnutls_srp.c//g' -i lib/Makefile.in
 sed 's/gnutls_srp.lo//g' -i lib/Makefile.in
@@ -279,6 +285,9 @@ make check %{?_smp_mflags}
 %endif
 
 %changelog
+* Fri Aug 28 2020 Sérgio Basto <sergio@serjux.com> - 3.4.17-7
+- Add patches for GNUTLS-SA-2017-4/CVE-2017-7507
+
 * Fri Oct 25 2019 Sérgio Basto <sergio@serjux.com> - 3.4.17-6
 - compat-gnutls34-devel need requires compat-nettle32-devel or else pkg-config
   gnutls won't work
