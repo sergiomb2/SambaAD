@@ -1,0 +1,24 @@
+--- ./testsuite/rsa-sec-decrypt-test.c.orig	2020-08-30 01:26:29.928023682 +0100
++++ ./testsuite/rsa-sec-decrypt-test.c	2020-08-30 01:26:48.172947365 +0100
+@@ -78,7 +78,8 @@ test_main(void)
+ 
+   memset(verifybad, 'A', PAYLOAD_SIZE);
+ 
+-  for (size_t size = 1; size < 51; size++)
++  size_t size;
++  for (size = 1; size < 51; size++)
+     {
+       ASSERT (rsa_generate_keypair(&pub, &key, &random_ctx,
+ 			           (nettle_random_func *) knuth_lfib_random,
+--- ./rsa-sign-tr.c.orig	2020-08-30 01:25:38.500238805 +0100
++++ ./rsa-sign-tr.c	2020-08-30 01:26:13.110094031 +0100
+@@ -240,7 +240,8 @@ sec_equal(const mp_limb_t *a, const mp_l
+ {
+   volatile mp_limb_t z = 0;
+ 
+-  for (size_t i = 0; i < limbs; i++)
++  size_t i;
++  for (i = 0; i < limbs; i++)
+     {
+       z |= (a[i] ^ b[i]);
+     }
