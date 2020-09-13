@@ -1,4 +1,5 @@
 %global suffix_ver 3.4
+%global __pkgconfig_path   ^((%{_libdir}|%{_datadir})/%{name}/pkgconfig/.*\.pc|%{_bindir}/pkg-config)$
 
 Name:           compat-nettle34
 Version:        3.4.1
@@ -15,6 +16,8 @@ Patch1:		nettle-3.4.1-c99.patch
 
 BuildRequires:  gmp-devel m4 texinfo-tex
 BuildRequires:	libtool, automake, autoconf, gettext-devel
+Provides:       compat-nettle32 = %{version}-%{release}
+Obsoletes:      compat-nettle32 < %{version}-%{release}
 
 Requires(post): info
 Requires(preun): info
