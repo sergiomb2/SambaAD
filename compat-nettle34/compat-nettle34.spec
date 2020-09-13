@@ -3,7 +3,7 @@
 
 Name:           compat-nettle34
 Version:        3.4.1
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        A low-level cryptographic library
 
 Group:          Development/Libraries
@@ -16,6 +16,7 @@ Patch1:		nettle-3.4.1-c99.patch
 
 BuildRequires:  gmp-devel m4 texinfo-tex
 BuildRequires:	libtool, automake, autoconf, gettext-devel
+Provides:       nettle = %{version}-%{release}
 Provides:       compat-nettle32 = %{version}-%{release}
 Obsoletes:      compat-nettle32 < %{version}-%{release}
 
@@ -59,6 +60,11 @@ autoreconf -ifv
 
 
 %install
+mkdir -p %{buildroot}/etc/profile.d/
+cat > %{buildroot}/etc/profile.d/%{name}.sh <<EOF
+export export PKG_CONFIG_PATH=/usr/lib64/compat-nettle34/pkgconfig/
+EOF
+
 make install DESTDIR=$RPM_BUILD_ROOT INSTALL="install -p"
 make install-shared DESTDIR=$RPM_BUILD_ROOT INSTALL="install -p"
 #mkdir -p $RPM_BUILD_ROOT%{_infodir}
@@ -112,6 +118,7 @@ make check
 %dir %{_libdir}/%{name}/pkgconfig
 %{_libdir}/%{name}/pkgconfig/*.pc
 %{_libdir}/lib*.so
+/etc/profile.d/%{name}.sh
 
 %post
 /sbin/install-info %{_infodir}/nettle-%{suffix_ver}.info %{_infodir}/dir || :
@@ -125,8 +132,11 @@ fi
 %postun -p /sbin/ldconfig
 
 
-
 %changelog
+* Sun Sep 13 2020 Sérgio Basto <sergio@serjux.com> - 3.4.1-3
+- Improve packaging using pkgconfig and add export PKG_CONFIG_PATH
+  (in /etc/profile.d/%{name}.sh)
+
 * Wed Sep 02 2020 Sérgio Basto <sergio@serjux.com> - 3.4.1-2
 - Fix suffix on binaries
 
