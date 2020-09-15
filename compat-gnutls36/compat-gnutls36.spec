@@ -9,16 +9,17 @@
 %endif
 %bcond_without fips
 
-Name: gnutls
+%global realname gnutls
+Name: compat-gnutls36
 Version: 3.6.8
-Release: 11%{?dist}
+Release: 12%{?dist}
 Summary: A TLS protocol implementation
 # The libraries are LGPLv2.1+, utilities are GPLv3+
 License: GPLv3+ and LGPLv2+
 Group: System Environment/Libraries
 URL: http://www.gnutls.org/
-Source0: ftp://ftp.gnutls.org/gcrypt/gnutls/v3.6/%{name}-%{version}.tar.xz
-Source1: ftp://ftp.gnutls.org/gcrypt/gnutls/v3.6/%{name}-%{version}.tar.xz.sig
+Source0: ftp://ftp.gnutls.org/gcrypt/gnutls/v3.6/%{realname}-%{version}.tar.xz
+Source1: ftp://ftp.gnutls.org/gcrypt/gnutls/v3.6/%{realname}-%{version}.tar.xz.sig
 Source2: gpgkey-1F42418905D8206AA754CCDC29EE58B996865171.gpg
 Patch1:	gnutls-3.2.7-rpath.patch
 Patch2: gnutls-3.6.4-no-now-guile.patch
@@ -43,31 +44,37 @@ Patch7: gnutls-3.6.8-session-ticket-ub.patch
 Patch14: gnutls-3.6.8-fix-cfb8-decrypt.patch
 Patch15: gnutls-3.6.12-dtls-random.patch
 Patch16: gnutls-3.6.14-totp-init.patch
-BuildRequires: p11-kit-devel >= 0.21.3, gettext-devel
-BuildRequires: zlib-devel, readline-devel, libtasn1-devel >= 4.3
-#BuildRequires: libtool, automake, autoconf, texinfo
+BuildRequires: p11-kit-devel >= 0.21.3
+BuildRequires: gettext-devel
+BuildRequires: zlib-devel readline-devel libtasn1-devel >= 4.3
+#BuildRequires: libtool automake autoconf texinfo
 BuildRequires: autogen-libopts-devel >= 5.18 autogen
 BuildRequires: pkgconfig(nettle) >= 3.4.1
 BuildRequires: pkgconfig(hogweed) >= 3.4.1
 BuildRequires: trousers-devel >= 0.3.11.2
 BuildRequires: libidn2-devel
 BuildRequires: libunistring-devel
-BuildRequires: gperf, net-tools, datefudge, softhsm, gcc, gcc-c++
+BuildRequires: gperf
+BuildRequires: net-tools
+BuildRequires: softhsm
+BuildRequires: datefudge
 BuildRequires: gnupg2
 %if %{with fips}
 BuildRequires: fipscheck
 %endif
+#Requires: crypto-policies
 
 # for a sanity check on cert loading
-BuildRequires: p11-kit-trust, ca-certificates
-Requires: crypto-policies
+BuildRequires: p11-kit-trust
+BuildRequires: ca-certificates
 Requires: p11-kit-trust
 Requires: libtasn1 >= 4.3
-Requires: nettle >= 3.4.1
+#Requires: nettle >= 3.4.1
 Requires: trousers >= 0.3.11.2
 
 %if %{with dane}
-BuildRequires: unbound-devel unbound-libs
+BuildRequires: unbound-devel
+BuildRequires: unbound-libs
 %endif
 %if %{with guile}
 BuildRequires: guile-devel
@@ -88,6 +95,9 @@ Requires: %{name}-c++%{?_isa} = %{version}-%{release}
 Requires: %{name}-dane%{?_isa} = %{version}-%{release}
 %endif
 Requires: pkgconfig
+Requires: libtasn1-devel >= 4.3
+Requires: libidn-devel
+Requires: nettle-devel >= 3.4.1
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 
@@ -170,7 +180,7 @@ This package contains Guile bindings for the library.
 %prep
 gpgv2 --keyring %{SOURCE2} %{SOURCE1} %{SOURCE0}
 
-%autosetup -p1
+%autosetup -p1 -n %{realname}-%{version}
 
 sed -i -e 's|sys_lib_dlsearch_path_spec="/lib /usr/lib|sys_lib_dlsearch_path_spec="/lib /usr/lib %{_libdir}|g' configure
 rm -f lib/minitasn1/*.c lib/minitasn1/*.h
@@ -182,11 +192,11 @@ echo "SYSTEM=NORMAL" >> tests/system.prio
 # via the crypto policies
 
 %build
-
 #CCASFLAGS="$CCASFLAGS -Wa,--generate-missing-build-notes=yes"
 #export CCASFLAGS
 #rm -rf build-aux/ m4/
 #autoreconf -i
+autoreconf -v
 %configure \
     --disable-static \
 %if %{with fips}
@@ -194,38 +204,32 @@ echo "SYSTEM=NORMAL" >> tests/system.prio
 %endif
     --enable-sha1-support \
     --disable-non-suiteb-curves \
-%if %{with openssl}
-    --enable-openssl-compatibility \
-%else
     --disable-openssl-compatibility \
-%endif
     --with-system-priority-file=%{_sysconfdir}/crypto-policies/back-ends/gnutls.config \
     --with-trousers-lib=%{_libdir}/libtspi.so.1 \
-    --htmldir=%{_docdir}/manual \
+    --htmldir=%{_docdir}/%{name} \
 %if %{with guile}
-   --enable-guile \
+    --enable-guile \
 %else
-   --disable-guile \
+    --disable-guile \
 %endif
 %if %{with p11kit}
     --with-p11-kit \
-    --with-default-trust-store-pkcs11="pkcs11:" \
+    --with-default-trust-store-pkcs11="pkcs11:model=p11-kit-trust;manufacturer=PKCS%2311%20Kit" \
 %else
     --without-p11-kit \
 %endif
 %if 0%{?rhel} && 0%{?rhel} < 7
-   --with-included-libtasn1 \
+    --with-included-libtasn1 \
 %endif
 %if %{with dane}
-   --with-unbound-root-key-file=/var/lib/unbound/root.key \
-%else
-   --disable-dane \
+    --with-unbound-root-key-file=/var/lib/unbound/root.key \
+    --enable-dane \
 %endif
-   --disable-rpath \
-   --with-default-priority-string="@SYSTEM"
+    --disable-rpath \
+    --with-default-priority-string="@SYSTEM"
 
-#   --disable-tests \
-make %{?_smp_mflags} V=1
+%make_build
 
 %if %{with fips}
 %define __spec_install_post \
@@ -238,34 +242,55 @@ make %{?_smp_mflags} V=1
 %endif
 
 %install
-make install DESTDIR=$RPM_BUILD_ROOT
+%make_install
 make -C doc install-html DESTDIR=$RPM_BUILD_ROOT
 rm -f $RPM_BUILD_ROOT%{_infodir}/dir
 rm -f $RPM_BUILD_ROOT%{_libdir}/*.la
 rm -f $RPM_BUILD_ROOT%{_libdir}/guile/2.0/guile-gnutls*.a
 rm -f $RPM_BUILD_ROOT%{_libdir}/guile/2.0/guile-gnutls*.la
 rm -f $RPM_BUILD_ROOT%{_libdir}/gnutls/libpkcs11mock1.*
-%if %{without dane}
-rm -f $RPM_BUILD_ROOT%{_libdir}/pkgconfig/gnutls-dane.pc
+
+mkdir -p $RPM_BUILD_ROOT%{_includedir}/%{name}
+mv $RPM_BUILD_ROOT%{_includedir}/gnutls $RPM_BUILD_ROOT%{_includedir}/%{name}/
+mkdir -p $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
+mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/gnutls.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
+sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/gnutls.pc
+#sed -r -i 's#^(libdir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/nettle.pc
+#sed -r -i 's#^(libdir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/hogweed.pc
+
+# Rename or delete bin files to avoid conflicts with base packages
+#mv $RPM_BUILD_ROOT%{_infodir}/nettle.info $RPM_BUILD_ROOT%{_infodir}/nettle-3.2.info
+#cp -f %{SOURCE1} $RPM_BUILD_ROOT/%{_bindir}/libgnutls-config
+# rm -f $RPM_BUILD_ROOT%{_mandir}/man3/*srp*
+# rm -f $RPM_BUILD_ROOT%{_infodir}/dir
+# all 
+rm $RPM_BUILD_ROOT%{_mandir}/man3/*
+rm $RPM_BUILD_ROOT%{_infodir}/*
+%if %{with dane}
+mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/gnutls-dane.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
+sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/gnutls-dane.pc
+%else
+rm -f $RPM_BUILD_ROOT/%{_libdir}/pkgconfig/gnutls-dane.pc
 %endif
+
 
 %find_lang gnutls
 
 %check
 make check %{?_smp_mflags}
 
-%post devel
-if [ -f %{_infodir}/gnutls.info.gz ]; then
-    /sbin/install-info %{_infodir}/gnutls.info.gz %{_infodir}/dir || :
-fi
+%post -p /sbin/ldconfig
+%postun -p /sbin/ldconfig
 
-%preun devel
-if [ $1 = 0 -a -f %{_infodir}/gnutls.info.gz ]; then
-   /sbin/install-info --delete %{_infodir}/gnutls.info.gz %{_infodir}/dir || :
-fi
+%post c++ -p /sbin/ldconfig
+%postun c++ -p /sbin/ldconfig
+
+%if %{with guile}
+%post guile -p /sbin/ldconfig
+%postun guile -p /sbin/ldconfig
+%endif
 
 %files -f gnutls.lang
-%defattr(-,root,root,-)
 %{_libdir}/libgnutls.so.30*
 %if %{with fips}
 %{_libdir}/.libgnutls.so.30*.hmac
@@ -277,230 +302,73 @@ fi
 %{_libdir}/libgnutlsxx.so.*
 
 %files devel
-%defattr(-,root,root,-)
-%{_includedir}/*
+#/usr/gnutls/bin/libgnutls*-config
+%{_includedir}/%{name}/gnutls/*.h
 %{_libdir}/libgnutls*.so
+%dir %{_libdir}/%{name}
 %if %{with fips}
 %{_libdir}/.libgnutls.so.*.hmac
 %endif
-
-%{_libdir}/pkgconfig/*.pc
-%{_mandir}/man3/*
-%{_infodir}/gnutls*
-%{_infodir}/pkcs11-vision*
-%{_docdir}/manual/*
+%{_libdir}/%{name}/pkgconfig/*.pc
+%{_docdir}/%{name}/*
+#{_mandir}/man3/*
+#{_infodir}/*
 
 %files utils
-%defattr(-,root,root,-)
-%{_bindir}/certtool
-#{_bindir}/tpmtool
-%{_bindir}/ocsptool
-%{_bindir}/psktool
-#{_bindir}/p11tool
-%{_bindir}/srptool
-%if %{with dane}
-%{_bindir}/danetool
-%endif
-%{_bindir}/gnutls*
+%{_bindir}/*
 %{_mandir}/man1/*
-%doc doc/certtool.cfg
+#doc doc/certtool.cfg
 
 %if %{with dane}
 %files dane
-%defattr(-,root,root,-)
 %{_libdir}/libgnutls-dane.so.*
 %endif
 
 %if %{with guile}
 %files guile
-%defattr(-,root,root,-)
 %{_libdir}/guile/2.0/guile-gnutls*.so*
+%{_datadir}/guile/site/gnutls
+%{_datadir}/guile/site/gnutls.scm
 %{_libdir}/guile/2.0/site-ccache/gnutls.go
 %{_libdir}/guile/2.0/site-ccache/gnutls/extra.go
-%{_datadir}/guile/site/2.0/gnutls.scm
-%{_datadir}/guile/site/2.0/gnutls/extra.scm
 %endif
 
 %changelog
-* Mon Jun  8 2020 Daiki Ueno <dueno@redhat.com> - 3.6.8-11
-- Fix CVE-2020-13777 (#1844147)
-- Fix configure: WARNING: unrecognized options: --with-libtasn1-prefix, --enable-tls13-support, --enable-dane
+* Tue Sep 15 2020 Sérgio Basto <sergio@serjux.com> - 3.6.8-12
+- 3.6.8-11 compat- style
 
+* Fri Aug 28 2020 Sérgio Basto <sergio@serjux.com> - 3.4.17-7
+- Add patches for GNUTLS-SA-2017-4/CVE-2017-7507
 
-* Tue Apr 21 2020 Daiki Ueno <dueno@redhat.com> - 3.6.8-10
-- Fix CVE-2020-11501 (#1826176)
+* Fri Oct 25 2019 Sérgio Basto <sergio@serjux.com> - 3.4.17-6
+- compat-gnutls34-devel need requires compat-nettle32-devel or else pkg-config
+  gnutls won't work
 
-* Wed Nov  6 2019 Daiki Ueno <dueno@redhat.com> - 3.6.8-9
-- Fix CFB8 decryption when repeatedly called (#1757848)
-- Fix gnutls_aead_cipher_{en,de}cryptv2 with input not multiple of block size (#1757856)
+* Thu Feb 21 2019 Sérgio Basto <sergio@serjux.com> - 3.4.17-5
+- Devel package need libtasn1-devel, libtasn1-devel, libidn-devel
+  and p11-kit-devel
 
-* Fri Aug 16 2019 Daiki Ueno <dueno@redhat.com> - 3.6.8-8
-- Use fallback random function for RSA blinding in FIPS selftests
+* Wed Dec 19 2018 Sérgio Basto <sergio@serjux.com> - 3.4.17-4
+- Rewrite compat package
 
-* Fri Aug 16 2019 Daiki Ueno <dueno@redhat.com> - 3.6.8-7
-- Fix deterministic signature creation in selftests
+* Thu Nov 15 2018 Sérgio Basto <sergio@serjux.com> - 3.4.17-3
+- Compat-gnutls34 based on compat-gnutls2-2.8.5-2.art.src (Backport GNUtls to Centos/rhel 4 and 5)
 
-* Fri Aug 16 2019 Daiki Ueno <dueno@redhat.com> - 3.6.8-6
-- Treat login error more gracefully when enumerating PKCS#11 tokens (#1705478)
-- Use deterministic ECDSA/DSA in FIPS selftests (#1716560)
-- Add gnutls_aead_cipher_{encrypt,decrypt}v2 functions (#1684461)
+* Wed Jan 11 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.17-2
+- Addressed various flaws (CVE-2017-5337, CVE-2017-5334, CVE-2017-5336, CVE-2017-5335)
 
-* Fri Aug  9 2019 Daiki Ueno <dueno@redhat.com> - 3.6.8-5
-- Avoid UB when encrypting session tickets
-
-* Tue Jul  2 2019 Daiki Ueno <dueno@redhat.com> - 3.6.8-4
-- Add RNG continuous test under FIPS
-
-* Fri Jun 14 2019 Daiki Ueno <dueno@redhat.com> - 3.6.8-3
-- Follow-up fix on multiple key updates handling (#1673975)
-
-* Thu Jun 13 2019 Daiki Ueno <dueno@redhat.com> - 3.6.8-2
-- Run FIPS AES self-tests over overridden algorithms
-
-* Wed May 29 2019 Daiki Ueno <dueno@redhat.com> - 3.6.8-1
-- Update to upstream 3.6.8 release
-
-* Fri May 24 2019 Anderson Sasaki <ansasaki@redhat.com> - 3.6.5-4
-- Fixed FIPS signatures self tests (#1680509)
-
-* Wed Mar 27 2019 Anderson Sasaki <ansasaki@redhat.com> - 3.6.5-3
-- Fixed CVE-2019-3829 (#1693285)
-- Fixed CVE-2019-3836 (#1693288)
-- Added explicit BuildRequires for nettle-devel >= 3.4.1
-
-* Fri Jan 11 2019 Anderson Sasaki <ansasaki@redhat.com> - 3.6.5-2
-- Fixed FIPS integrity self tests (#1665061)
-
-* Mon Dec 17 2018 Anderson Sasaki <ansasaki@redhat.com> - 3.6.5-1
-- Update to upstream 3.6.5 release
-- Fixes CVE-2018-16868 (#1655395)
-- Removed ldconfig scriptlet
-- Added explicit Requires for nettle >= 3.4.1
-
-* Mon Nov 26 2018 Anderson Sasaki <ansasaki@redhat.com> - 3.6.4-7
-- Fix incorrect certificate type returned in TLS1.3 resumption (#1649786)
-
-* Mon Nov 12 2018 Anderson Sasaki <ansasaki@redhat.com> - 3.6.4-6
-- Add support for record_size_limit extension in TLS1.2 (#1644850)
-
-* Tue Oct 30 2018 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.6.4-5
-- Fix issue with GOST ciphers (#1644193)
-- Made gnutls-serv use the default priorities if none is specified (#1644243)
-
-* Wed Oct 24 2018 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.6.4-3
-- Fix issue with rehandshake affecting glib-networking (#1641072)
-
-* Tue Oct 16 2018 Tomáš Mráz <tmraz@redhat.com> - 3.6.4-2
-- Add missing annobin notes for assembler sources
-
-* Tue Sep 25 2018 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.6.4-1
-- Updated to upstream 3.6.4 release
-- Added support for the latest version of the TLS1.3 protocol
-
-* Thu Aug 16 2018 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.6.3-4
-- Fixed support for ECDSA public keys (backported from Fedora)
-- Ensure that we do not cause issues with version rollback detection
-  and TLS1.3.
-
-* Thu Jul 26 2018 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.6.3-4
-- Updated to upstream 3.6.3 release
-
-* Wed Jun 06 2018 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.6.2-3
-- Include FIPS mode
-- Add missing BuildRequires: gnupg2 for gpgv2 in %%prep
-
-* Fri Feb 16 2018 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.6.2-1
-- Updated to upstream 3.6.2 release
-
-* Wed Feb 07 2018 Fedora Release Engineering <releng@fedoraproject.org> - 3.6.1-5
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_28_Mass_Rebuild
-
-* Fri Feb  2 2018 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.6.1-4
-- Rebuilt to address incompatibility with new nettle
-
-* Thu Nov 30 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.6.1-3
-- Corrected regression from 3.6.1-2 which prevented the loading of
-  arbitrary p11-kit modules (#1507402)
-
-* Mon Nov  6 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.6.1-2
-- Prevent the loading of all PKCS#11 modules on certificate verification
-  but only restrict to p11-kit trust module (#1507402)
-
-* Sat Oct 21 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.6.1-1
-- Update to upstream 3.6.1 release
-
-* Mon Aug 21 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.6.0-1
-- Update to upstream 3.6.0 release
-
-* Wed Aug 02 2017 Fedora Release Engineering <releng@fedoraproject.org> - 3.5.14-3
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Binutils_Mass_Rebuild
-
-* Wed Jul 26 2017 Fedora Release Engineering <releng@fedoraproject.org> - 3.5.14-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Mass_Rebuild
-
-* Tue Jul 04 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.5.14-1
-- Update to upstream 3.5.14 release
-
-* Wed Jun 07 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.5.13-1
-- Update to upstream 3.5.13 release
-
-* Thu May 11 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.5.12-2
-- Fix issue with p11-kit-trust arch dependency
-
-* Thu May 11 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.5.12-1
-- Update to upstream 3.5.12 release
-
-* Fri Apr 07 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.5.11-1
-- Update to upstream 3.5.11 release
-
-* Mon Mar 06 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.5.10-1
-- Update to upstream 3.5.10 release
-
-* Wed Feb 15 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.5.9-2
-- Work around missing pkg-config file (#1422256)
-
-* Tue Feb 14 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.5.9-1
-- Update to upstream 3.5.9 release
-
-* Fri Feb 10 2017 Fedora Release Engineering <releng@fedoraproject.org> - 3.5.8-3
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_26_Mass_Rebuild
-
-* Sat Feb  4 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.5.8-2
-- Added patch fix initialization issue in gnutls_pkcs11_obj_list_import_url4
-
-* Mon Jan  9 2017 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.5.8-1
+* Thu Dec  8 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.17-1
 - New upstream release
 
-* Tue Dec 13 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.5.7-3
-- Fix PKCS#8 file loading (#1404084)
-
-* Thu Dec  8 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.5.7-1
+* Mon Oct 10 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.16-1
 - New upstream release
 
-* Fri Nov  4 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.5.6-1
+* Thu Sep  8 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.15-1
 - New upstream release
 
-* Tue Oct 11 2016 walters@redhat.com - 3.5.5-2
-- Apply patch to fix compatibility with ostree (#1383708)
-
-* Mon Oct 10 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.5.5-1
+* Wed Jul  6 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.14-1
 - New upstream release
-
-* Thu Sep  8 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.5.4-1
-- New upstream release
-
-* Mon Aug 29 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.5.3-2
-- Work around #1371082 for x86
-- Fixed issue with DTLS sliding window implementation (#1370881)
-
-* Tue Aug  9 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.5.3-1
-- New upstream release
-
-* Wed Jul  6 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.5.2-1
-- New upstream release
-
-* Wed Jun 15 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.5.1-1
-- New upstream release
+- Addresses issue with certificate verification introduced in 3.4.12
 
 * Tue Jun  7 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> 3.4.13-1
 - New upstream release (#1343258)
