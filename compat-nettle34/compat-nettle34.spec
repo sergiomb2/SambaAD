@@ -33,6 +33,8 @@ Group:          Development/Libraries
 Requires:       %{name} = %{version}-%{release}
 Requires:       gmp-devel%{?_isa}
 Conflicts:      nettle-devel
+Provides:       compat-nettle32-devel = %{version}-%{release}
+Obsoletes:      compat-nettle32-devel < %{version}-%{release}
 
 %description
 Nettle is a cryptographic library that is designed to fit easily in more
