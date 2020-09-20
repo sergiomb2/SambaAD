@@ -10,6 +10,7 @@
 %bcond_without fips
 
 %global realname gnutls
+
 Name: compat-gnutls36
 Version: 3.6.8
 Release: 12%{?dist}
@@ -44,6 +45,7 @@ Patch7: gnutls-3.6.8-session-ticket-ub.patch
 Patch14: gnutls-3.6.8-fix-cfb8-decrypt.patch
 Patch15: gnutls-3.6.12-dtls-random.patch
 Patch16: gnutls-3.6.14-totp-init.patch
+
 BuildRequires: p11-kit-devel >= 0.21.3
 BuildRequires: gettext-devel
 BuildRequires: zlib-devel readline-devel libtasn1-devel >= 4.3
@@ -82,9 +84,16 @@ BuildRequires: guile-devel
 # Wildcard bundling exception https://fedorahosted.org/fpc/ticket/174
 Provides: bundled(gnulib) = 20130424
 
+# Handle compat packaging
+Provides: compat-gnutls34 = %{version}-release
+Obsoletes: compat-gnutls34 < %{version}-release
+
 %package c++
 Summary: The C++ interface to GnuTLS
 Requires: %{name}%{?_isa} = %{version}-%{release}
+# Handle compat packaging
+Provides: compat-gnutls34-c++ = %{version}-release
+Obsoletes: compat-gnutls34-c++ < %{version}-release
 
 %package devel
 Summary: Development files for the %{name} package
@@ -100,6 +109,9 @@ Requires: libidn-devel
 Requires: nettle-devel >= 3.4.1
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
+# Handle compat packaging
+Provides: compat-gnutls34-devel = %{version}-release
+Obsoletes: compat-gnutls34-devel < %{version}-release
 
 %package utils
 License: GPLv3+
@@ -109,11 +121,17 @@ Requires: %{name}%{?_isa} = %{version}-%{release}
 %if %{with dane}
 Requires: %{name}-dane%{?_isa} = %{version}-%{release}
 %endif
+# Handle compat packaging
+Provides: compat-gnutls34-utils = %{version}-release
+Obsoletes: compat-gnutls34-utils < %{version}-release
 
 %if %{with dane}
 %package dane
 Summary: A DANE protocol implementation for GnuTLS
 Requires: %{name}%{?_isa} = %{version}-%{release}
+# Handle compat packaging
+Provides: compat-gnutls34-dane = %{version}-release
+Obsoletes: compat-gnutls34-dane < %{version}-release
 %endif
 
 %if %{with guile}
@@ -122,6 +140,9 @@ Summary: Guile bindings for the GNUTLS library
 Group: Development/Libraries
 Requires: %{name}%{?_isa} = %{version}-%{release}
 Requires: guile
+# Handle compat packaging
+Provides: compat-gnutls34-guile = %{version}-release
+Obsoletes: compat-gnutls34-guile < %{version}-release
 %endif
 
 %description
@@ -334,6 +355,9 @@ make check %{?_smp_mflags}
 %endif
 
 %changelog
+* Sun Sep 20 2020 Nico Kadel-Garcia <nkadel@gmail.com> - 3.6.8-12
+- Add Provides and Obsoletes for compat-gnutls34
+
 * Tue Sep 15 2020 Sérgio Basto <sergio@serjux.com> - 3.6.8-12
 - 3.6.8-11 compat- style
 
