@@ -5,7 +5,7 @@
 
 Name:           compat-nettle34
 Version:        3.4.1
-Release:        4%%{?dist}
+Release:        4%{?dist}
 Summary:        A low-level cryptographic library
 
 Group:          Development/Libraries
@@ -140,7 +140,7 @@ fi
 
 
 %changelog
-* Sat Sep 20 2020 Nico Kadel-Garcia <nkadel@gmail.com> - 3.4.1-4
+* Sun Sep 20 2020 Nico Kadel-Garcia <nkadel@gmail.com> - 3.4.1-4
 - Conflict with nettle-devel
 - Add checksums to Source URL
 
