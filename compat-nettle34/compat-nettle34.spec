@@ -1,16 +1,19 @@
 %global suffix_ver 3.4
 %global __pkgconfig_path   ^((%{_libdir}|%{_datadir})/%{name}/pkgconfig/.*\.pc|%{_bindir}/pkg-config)$
 
+%global nettle_checksum /sha512/9a5b4c316222f22feb692106ceae299c2b59229ef96cac1739095c65c9ddee4b1d542579e5b49d4863bd6a8c093611f0fdd1c7cb3251844c85b7e089e406ffc5
+
 Name:           compat-nettle34
 Version:        3.4.1
-Release:        3%{?dist}
+Release:        4%%{?dist}
 Summary:        A low-level cryptographic library
 
 Group:          Development/Libraries
 License:        LGPLv3+ or GPLv2+
 URL:            http://www.lysator.liu.se/~nisse/nettle/
-Source0:	nettle-%{version}-hobbled.tar.xz
 #Source0:        http://www.lysator.liu.se/~nisse/archive/%%{name}-%%{version}.tar.gz
+# sha512 checksums in URL introduced vo src.redoraproject.org
+Source0:	https://src.fedoraproject.org/lookaside/pkgs/nettle/nettle-%{version}-hobbled.tar.xz%{?nettle_checksum}/nettle-%{version}-hobbled.tar.xz
 Patch0:		nettle-3.3-remove-ecc-testsuite.patch
 Patch1:		nettle-3.4.1-c99.patch
 
@@ -29,6 +32,7 @@ Summary:        Development headers for a low-level cryptographic library
 Group:          Development/Libraries
 Requires:       %{name} = %{version}-%{release}
 Requires:       gmp-devel%{?_isa}
+Conflicts:      nettle-devel
 
 %description
 Nettle is a cryptographic library that is designed to fit easily in more
@@ -89,6 +93,7 @@ mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/nettle.pc $RPM_BUILD_ROOT%{_libdir}/%{nam
 mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/hogweed.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
 sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/nettle.pc
 sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/hogweed.pc
+
 #mv $RPM_BUILD_ROOT%{_libdir}/libnettle.so $RPM_BUILD_ROOT%{_libdir}/%{name}
 #mv $RPM_BUILD_ROOT%{_libdir}/libhogweed.so $RPM_BUILD_ROOT%{_libdir}/%{name}
 #sed -r -i 's#^(libdir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/nettle.pc
@@ -133,15 +138,13 @@ fi
 
 
 %changelog
+* Sat Sep 20 2020 Nico Kadel-Garcia <nkadel@gmail.com> - 3.4.1-4
+- Conflict with nettle-devel
+- Add checksums to Source URL
+
 * Sun Sep 13 2020 Sérgio Basto <sergio@serjux.com> - 3.4.1-3
 - Improve packaging using pkgconfig and add export PKG_CONFIG_PATH
   (in /etc/profile.d/%{name}.sh)
-
-* Wed Sep 02 2020 Sérgio Basto <sergio@serjux.com> - 3.4.1-2
-- Fix suffix on binaries
-
-* Sun Aug 30 2020 Sérgio Basto <sergio@serjux.com> - 3.4.1-1
-- Update to 3.4.1
 
 * Fri Jul 29 2016 Nikos Mavrogiannopoulos <nmav@redhat.com> - 3.2-2
 - Imported nettle 3.2 from fedora 24.
