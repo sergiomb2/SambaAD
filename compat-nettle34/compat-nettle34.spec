@@ -1,9 +1,9 @@
 %global suffix_ver 3.4
-%global __pkgconfig_path   ^((%{_libdir}|%{_datadir})/%{name}/pkgconfig/.*\.pc|%{_bindir}/pkg-config)$
+#global __pkgconfig_path   ^((%{_libdir}|%{_datadir})/%{name}/pkgconfig/.*\.pc|%{_bindir}/pkg-config)$
 
 Name:           compat-nettle34
 Version:        3.4.1
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        A low-level cryptographic library
 
 Group:          Development/Libraries
@@ -14,11 +14,16 @@ Source0:	nettle-%{version}-hobbled.tar.xz
 Patch0:		nettle-3.3-remove-ecc-testsuite.patch
 Patch1:		nettle-3.4.1-c99.patch
 
-BuildRequires:  gmp-devel m4 texinfo-tex
-BuildRequires:	libtool, automake, autoconf, gettext-devel
-Provides:       nettle = %{version}-%{release}
+BuildRequires:  gmp-devel
+BuildRequires:  m4
+BuildRequires:  texinfo-tex
+BuildRequires:  libtool
+BuildRequires:  automake
+BuildRequires:  autoconf
+BuildRequires:  gettext-devel
 Provides:       compat-nettle32 = %{version}-%{release}
 Obsoletes:      compat-nettle32 < %{version}-%{release}
+Provides:       nettle = %{version}-%{release}
 
 Requires(post): info
 Requires(preun): info
@@ -29,6 +34,9 @@ Summary:        Development headers for a low-level cryptographic library
 Group:          Development/Libraries
 Requires:       %{name} = %{version}-%{release}
 Requires:       gmp-devel%{?_isa}
+Provides:       compat-nettle32-devel = %{version}-%{release}
+Obsoletes:      compat-nettle32-devel < %{version}-%{release}
+Provides:       nettle-devel = %{version}-%{release}
 
 %description
 Nettle is a cryptographic library that is designed to fit easily in more
@@ -60,10 +68,10 @@ autoreconf -ifv
 
 
 %install
-mkdir -p %{buildroot}/etc/profile.d/
-cat > %{buildroot}/etc/profile.d/%{name}.sh <<EOF
-export export PKG_CONFIG_PATH=/usr/lib64/compat-nettle34/pkgconfig/
-EOF
+#mkdir -p %{buildroot}/etc/profile.d/
+#cat > %{buildroot}/etc/profile.d/%{name}.sh <<EOF
+#export export PKG_CONFIG_PATH=/usr/lib64/compat-nettle34/pkgconfig/
+#EOF
 
 make install DESTDIR=$RPM_BUILD_ROOT INSTALL="install -p"
 make install-shared DESTDIR=$RPM_BUILD_ROOT INSTALL="install -p"
@@ -82,15 +90,16 @@ mv $RPM_BUILD_ROOT%{_bindir}/sexp-conv $RPM_BUILD_ROOT%{_bindir}/sexp-conv-%{suf
 mv $RPM_BUILD_ROOT%{_bindir}/nettle-hash $RPM_BUILD_ROOT%{_bindir}/nettle-hash-%{suffix_ver}
 mv $RPM_BUILD_ROOT%{_bindir}/nettle-pbkdf2 $RPM_BUILD_ROOT%{_bindir}/nettle-pbkdf2-%{suffix_ver}
 
-mkdir -p $RPM_BUILD_ROOT%{_includedir}/%{name}
-mv $RPM_BUILD_ROOT%{_includedir}/nettle $RPM_BUILD_ROOT%{_includedir}/%{name}/
-mkdir -p $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
-mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/nettle.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
-mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/hogweed.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
-sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/nettle.pc
-sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/hogweed.pc
-#mv $RPM_BUILD_ROOT%{_libdir}/libnettle.so $RPM_BUILD_ROOT%{_libdir}/%{name}
-#mv $RPM_BUILD_ROOT%{_libdir}/libhogweed.so $RPM_BUILD_ROOT%{_libdir}/%{name}
+#mkdir -p $RPM_BUILD_ROOT%{_includedir}/%{name}
+#mv $RPM_BUILD_ROOT%{_includedir}/nettle $RPM_BUILD_ROOT%{_includedir}/%{name}/
+#mkdir -p $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
+#mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/nettle.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
+#mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/hogweed.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
+#sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/nettle.pc
+#sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/hogweed.pc
+#rm $RPM_BUILD_ROOT%{_libdir}/libnettle.so
+#rm $RPM_BUILD_ROOT%{_libdir}/libhogweed.so
+#ln -s $RPM_BUILD_ROOT%{_libdir}/%{name}
 #sed -r -i 's#^(libdir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/nettle.pc
 #sed -r -i 's#^(libdir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/hogweed.pc
 
@@ -113,12 +122,12 @@ make check
 
 %files devel
 %doc descore.README nettle.html nettle.pdf
-%{_includedir}/%{name}/nettle
-%dir %{_libdir}/%{name}
-%dir %{_libdir}/%{name}/pkgconfig
-%{_libdir}/%{name}/pkgconfig/*.pc
+%{_includedir}/nettle
+#dir %%{_libdir}/%%{name}
+#dir %%{_libdir}/%%{name}/pkgconfig
+%{_libdir}/pkgconfig/*.pc
 %{_libdir}/lib*.so
-/etc/profile.d/%{name}.sh
+#/etc/profile.d/%%{name}.sh
 
 %post
 /sbin/install-info %{_infodir}/nettle-%{suffix_ver}.info %{_infodir}/dir || :
@@ -133,6 +142,10 @@ fi
 
 
 %changelog
+* Sat Sep 19 2020 Sérgio Basto <sergio@serjux.com> - 3.4.1-4
+- Devel package back to default location, as can't be installed along
+  nettle-devel from system
+
 * Sun Sep 13 2020 Sérgio Basto <sergio@serjux.com> - 3.4.1-3
 - Improve packaging using pkgconfig and add export PKG_CONFIG_PATH
   (in /etc/profile.d/%{name}.sh)
