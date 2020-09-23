@@ -280,25 +280,49 @@ rm -f $RPM_BUILD_ROOT%{_libdir}/gnutls/libpkcs11mock1.*
 #sed -r -i 's#^(libdir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/hogweed.pc
 
 # Rename or delete bin files to avoid conflicts with base packages
-#mv $RPM_BUILD_ROOT%{_infodir}/nettle.info $RPM_BUILD_ROOT%{_infodir}/nettle-3.2.info
 #cp -f %{SOURCE1} $RPM_BUILD_ROOT/%{_bindir}/libgnutls-config
 # rm -f $RPM_BUILD_ROOT%{_mandir}/man3/*srp*
 # rm -f $RPM_BUILD_ROOT%{_infodir}/dir
 # all 
-rm $RPM_BUILD_ROOT%{_mandir}/man3/*
-rm $RPM_BUILD_ROOT%{_infodir}/*
+#rm $RPM_BUILD_ROOT%{_mandir}/man3/*
+#rm $RPM_BUILD_ROOT%{_infodir}/*
 %if %{with dane}
 #mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/gnutls-dane.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
 #sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/gnutls-dane.pc
+
+# For Transaction check error:
+#  file /usr/lib64/libgnutls-dane.so.0 from install of gnutls-dane-3.3.29-9.el7_6.x86_64 conflicts with file from package compat-gnutls36-dane-3.6.8-13.el7.x86_64
+#  file /usr/bin/danetool from install of gnutls-utils-3.3.29-9.el7_6.x86_64 conflicts with file from package compat-gnutls36-utils-3.6.8-13.el7.x86_64
+#  file /usr/share/man/man1/danetool.1.gz from install of gnutls-utils-3.3.29-9.el7_6.x86_64 conflicts with file from package compat-gnutls36-utils-3.6.8-13.el7.x86_64
+rm $RPM_BUILD_ROOT%{_libdir}/libgnutls-dane.so.0
+mv $RPM_BUILD_ROOT%{_bindir}/danetool $RPM_BUILD_ROOT%{_bindir}/danetool-%{suffix_ver}
+mv $RPM_BUILD_ROOT%{_mandir}/man1/danetool.1 $RPM_BUILD_ROOT%{_mandir}/man1/danetool-%{suffix_ver}.1
 %else
 rm -f $RPM_BUILD_ROOT/%{_libdir}/pkgconfig/gnutls-dane.pc
 %endif
 
+# Rename some files to avoid conflicts with base packages
+mv $RPM_BUILD_ROOT%{_bindir}/certtool $RPM_BUILD_ROOT%{_bindir}/certtool-%{suffix_ver}
+mv $RPM_BUILD_ROOT%{_bindir}/gnutls-cli $RPM_BUILD_ROOT%{_bindir}/gnutls-cli-%{suffix_ver}
+mv $RPM_BUILD_ROOT%{_bindir}/gnutls-cli-debug $RPM_BUILD_ROOT%{_bindir}/gnutls-cli-debug-%{suffix_ver}
+mv $RPM_BUILD_ROOT%{_bindir}/gnutls-serv $RPM_BUILD_ROOT%{_bindir}/gnutls-serv-%{suffix_ver}
+mv $RPM_BUILD_ROOT%{_bindir}/ocsptool $RPM_BUILD_ROOT%{_bindir}/ocsptool-%{suffix_ver}
+mv $RPM_BUILD_ROOT%{_bindir}/psktool $RPM_BUILD_ROOT%{_bindir}/psktool-%{suffix_ver}
+mv $RPM_BUILD_ROOT%{_mandir}/man1/certtool.1 $RPM_BUILD_ROOT%{_mandir}/man1/certtool-%{suffix_ver}.1
+mv $RPM_BUILD_ROOT%{_mandir}/man1/gnutls-cli.1 $RPM_BUILD_ROOT%{_mandir}/man1/gnutls-cli-%{suffix_ver}.1
+mv $RPM_BUILD_ROOT%{_mandir}/man1/gnutls-cli-debug.1 $RPM_BUILD_ROOT%{_mandir}/man1/gnutls-cli-debug-%{suffix_ver}.1
+mv $RPM_BUILD_ROOT%{_mandir}/man1/gnutls-serv.1 $RPM_BUILD_ROOT%{_mandir}/man1/gnutls-serv-%{suffix_ver}.1
+mv $RPM_BUILD_ROOT%{_mandir}/man1/ocsptool.1 $RPM_BUILD_ROOT%{_mandir}/man1/ocsptool-%{suffix_ver}.1
+mv $RPM_BUILD_ROOT%{_mandir}/man1/psktool.1 $RPM_BUILD_ROOT%{_mandir}/man1/psktool-%{suffix_ver}.1
+
+rm $RPM_BUILD_ROOT%{_mandir}/man1/p11tool.1
+rm $RPM_BUILD_ROOT%{_mandir}/man1/tpmtool.1
 
 #find_lang gnutls
+rm -rf $RPM_BUILD_ROOT%{_datadir}/locale/
 
 %check
-#make check %{?_smp_mflags}
+make check %{?_smp_mflags}
 
 %post -p /sbin/ldconfig
 %postun -p /sbin/ldconfig
@@ -332,8 +356,8 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/pkgconfig/gnutls-dane.pc
 %endif
 %{_libdir}/pkgconfig/*.pc
 %{_docdir}/%{name}/*
-#{_mandir}/man3/*
-#{_infodir}/*
+%{_mandir}/man3/*
+%{_infodir}/*
 
 %files utils
 %{_bindir}/*
