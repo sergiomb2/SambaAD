@@ -1,5 +1,6 @@
 %global suffix_ver 3.4
-#global __pkgconfig_path   ^((%{_libdir}|%{_datadir})/%{name}/pkgconfig/.*\.pc|%{_bindir}/pkg-config)$
+#global __pkgconfig_path   ^((%%{_libdir}|%{_datadir})/%%{name}/pkgconfig/.*\.pc|%%{_bindir}/pkg-config)$
+%global nettle_checksum sha512/9a5b4c316222f22feb692106ceae299c2b59229ef96cac1739095c65c9ddee4b1d542579e5b49d4863bd6a8c093611f0fdd1c7cb3251844c85b7e089e406ffc5
 
 Name:           compat-nettle34
 Version:        3.4.1
@@ -9,8 +10,9 @@ Summary:        A low-level cryptographic library
 Group:          Development/Libraries
 License:        LGPLv3+ or GPLv2+
 URL:            http://www.lysator.liu.se/~nisse/nettle/
-Source0:	nettle-%{version}-hobbled.tar.xz
 #Source0:        http://www.lysator.liu.se/~nisse/archive/%%{name}-%%{version}.tar.gz
+Source0:        https://src.fedoraproject.org/lookaside/pkgs/nettle/nettle-%{version}-hobbled.tar.xz/%{nettle_checksum}/nettle-%{version}-hobbled.tar.xz
+
 Patch0:		nettle-3.3-remove-ecc-testsuite.patch
 Patch1:		nettle-3.4.1-c99.patch
 
@@ -106,6 +108,17 @@ mv $RPM_BUILD_ROOT%{_bindir}/nettle-pbkdf2 $RPM_BUILD_ROOT%{_bindir}/nettle-pbkd
 %check
 make check
 
+%post
+/sbin/install-info %{_infodir}/nettle-%{suffix_ver}.info %{_infodir}/dir || :
+/sbin/ldconfig
+
+%preun
+if [ $1 = 0 ]; then
+  /sbin/install-info --delete %{_infodir}/nettle-%{suffix_ver}.info %{_infodir}/dir || :
+fi
+
+%postun -p /sbin/ldconfig
+
 %files
 %doc AUTHORS NEWS README TODO
 %license COPYINGv2 COPYING.LESSERv3
@@ -128,17 +141,6 @@ make check
 %{_libdir}/pkgconfig/*.pc
 %{_libdir}/lib*.so
 #/etc/profile.d/%%{name}.sh
-
-%post
-/sbin/install-info %{_infodir}/nettle-%{suffix_ver}.info %{_infodir}/dir || :
-/sbin/ldconfig
-
-%preun
-if [ $1 = 0 ]; then
-  /sbin/install-info --delete %{_infodir}/nettle-%{suffix_ver}.info %{_infodir}/dir || :
-fi
-
-%postun -p /sbin/ldconfig
 
 
 %changelog
