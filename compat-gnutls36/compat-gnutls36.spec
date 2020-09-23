@@ -295,7 +295,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/pkgconfig/gnutls-dane.pc
 %endif
 
 
-%find_lang gnutls
+#find_lang gnutls
 
 %check
 #make check %{?_smp_mflags}
@@ -311,7 +311,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/pkgconfig/gnutls-dane.pc
 %postun guile -p /sbin/ldconfig
 %endif
 
-%files -f gnutls.lang
+%files
 %{_libdir}/libgnutls.so.30*
 %if %{with fips}
 %{_libdir}/.libgnutls.so.30*.hmac
@@ -358,10 +358,11 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/pkgconfig/gnutls-dane.pc
 * Wed Sep 23 2020 Sérgio Basto <sergio@serjux.com> - 3.6.8-13
 - Devel package back to default location, as can't be installed along
   gnutls-devel from system
+- Remove gnutls translations /usr/share/locale/cs/LC_MESSAGES/gnutls.mo
+  to avoid conflicts with system package
 
 * Tue Sep 15 2020 Sérgio Basto <sergio@serjux.com> - 3.6.8-12
 - 3.6.8-11 compat- style
-
 
 * Fri Aug 28 2020 Sérgio Basto <sergio@serjux.com> - 3.4.17-7
 - Add patches for GNUTLS-SA-2017-4/CVE-2017-7507
