@@ -10,9 +10,10 @@
 %bcond_without fips
 
 %global realname gnutls
+
 Name: compat-gnutls36
 Version: 3.6.8
-Release: 12%{?dist}
+Release: 13%{?dist}
 Summary: A TLS protocol implementation
 # The libraries are LGPLv2.1+, utilities are GPLv3+
 License: GPLv3+ and LGPLv2+
@@ -44,6 +45,7 @@ Patch7: gnutls-3.6.8-session-ticket-ub.patch
 Patch14: gnutls-3.6.8-fix-cfb8-decrypt.patch
 Patch15: gnutls-3.6.12-dtls-random.patch
 Patch16: gnutls-3.6.14-totp-init.patch
+
 BuildRequires: p11-kit-devel >= 0.21.3
 BuildRequires: gettext-devel
 BuildRequires: zlib-devel readline-devel libtasn1-devel >= 4.3
@@ -82,9 +84,16 @@ BuildRequires: guile-devel
 # Wildcard bundling exception https://fedorahosted.org/fpc/ticket/174
 Provides: bundled(gnulib) = 20130424
 
+# Handle compat packaging
+Provides: compat-gnutls34 = %{version}-release
+Obsoletes: compat-gnutls34 < %{version}-release
+
 %package c++
 Summary: The C++ interface to GnuTLS
 Requires: %{name}%{?_isa} = %{version}-%{release}
+# Handle compat packaging
+Provides: compat-gnutls34-c++ = %{version}-release
+Obsoletes: compat-gnutls34-c++ < %{version}-release
 
 %package devel
 Summary: Development files for the %{name} package
@@ -100,6 +109,9 @@ Requires: libidn-devel
 Requires: nettle-devel >= 3.4.1
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
+# Handle compat packaging
+Provides: compat-gnutls34-devel = %{version}-release
+Obsoletes: compat-gnutls34-devel < %{version}-release
 
 %package utils
 License: GPLv3+
@@ -109,11 +121,17 @@ Requires: %{name}%{?_isa} = %{version}-%{release}
 %if %{with dane}
 Requires: %{name}-dane%{?_isa} = %{version}-%{release}
 %endif
+# Handle compat packaging
+Provides: compat-gnutls34-utils = %{version}-release
+Obsoletes: compat-gnutls34-utils < %{version}-release
 
 %if %{with dane}
 %package dane
 Summary: A DANE protocol implementation for GnuTLS
 Requires: %{name}%{?_isa} = %{version}-%{release}
+# Handle compat packaging
+Provides: compat-gnutls34-dane = %{version}-release
+Obsoletes: compat-gnutls34-dane < %{version}-release
 %endif
 
 %if %{with guile}
@@ -122,6 +140,9 @@ Summary: Guile bindings for the GNUTLS library
 Group: Development/Libraries
 Requires: %{name}%{?_isa} = %{version}-%{release}
 Requires: guile
+# Handle compat packaging
+Provides: compat-gnutls34-guile = %{version}-release
+Obsoletes: compat-gnutls34-guile < %{version}-release
 %endif
 
 %description
@@ -250,11 +271,11 @@ rm -f $RPM_BUILD_ROOT%{_libdir}/guile/2.0/guile-gnutls*.a
 rm -f $RPM_BUILD_ROOT%{_libdir}/guile/2.0/guile-gnutls*.la
 rm -f $RPM_BUILD_ROOT%{_libdir}/gnutls/libpkcs11mock1.*
 
-mkdir -p $RPM_BUILD_ROOT%{_includedir}/%{name}
-mv $RPM_BUILD_ROOT%{_includedir}/gnutls $RPM_BUILD_ROOT%{_includedir}/%{name}/
-mkdir -p $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
-mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/gnutls.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
-sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/gnutls.pc
+#mkdir -p $RPM_BUILD_ROOT%{_includedir}/%{name}
+#mv $RPM_BUILD_ROOT%{_includedir}/gnutls $RPM_BUILD_ROOT%{_includedir}/%{name}/
+#mkdir -p $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
+#mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/gnutls.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
+#sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/gnutls.pc
 #sed -r -i 's#^(libdir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/nettle.pc
 #sed -r -i 's#^(libdir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/hogweed.pc
 
@@ -267,8 +288,8 @@ sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkg
 rm $RPM_BUILD_ROOT%{_mandir}/man3/*
 rm $RPM_BUILD_ROOT%{_infodir}/*
 %if %{with dane}
-mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/gnutls-dane.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
-sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/gnutls-dane.pc
+#mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/gnutls-dane.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
+#sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/gnutls-dane.pc
 %else
 rm -f $RPM_BUILD_ROOT/%{_libdir}/pkgconfig/gnutls-dane.pc
 %endif
@@ -277,7 +298,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/pkgconfig/gnutls-dane.pc
 %find_lang gnutls
 
 %check
-make check %{?_smp_mflags}
+#make check %{?_smp_mflags}
 
 %post -p /sbin/ldconfig
 %postun -p /sbin/ldconfig
@@ -303,13 +324,13 @@ make check %{?_smp_mflags}
 
 %files devel
 #/usr/gnutls/bin/libgnutls*-config
-%{_includedir}/%{name}/gnutls/*.h
+%{_includedir}/gnutls/*.h
 %{_libdir}/libgnutls*.so
-%dir %{_libdir}/%{name}
+#dir %%{_libdir}/%%{name}
 %if %{with fips}
 %{_libdir}/.libgnutls.so.*.hmac
 %endif
-%{_libdir}/%{name}/pkgconfig/*.pc
+%{_libdir}/pkgconfig/*.pc
 %{_docdir}/%{name}/*
 #{_mandir}/man3/*
 #{_infodir}/*
@@ -334,8 +355,13 @@ make check %{?_smp_mflags}
 %endif
 
 %changelog
+* Wed Sep 23 2020 Sérgio Basto <sergio@serjux.com> - 3.6.8-13
+- Devel package back to default location, as can't be installed along
+  gnutls-devel from system
+
 * Tue Sep 15 2020 Sérgio Basto <sergio@serjux.com> - 3.6.8-12
 - 3.6.8-11 compat- style
+
 
 * Fri Aug 28 2020 Sérgio Basto <sergio@serjux.com> - 3.4.17-7
 - Add patches for GNUTLS-SA-2017-4/CVE-2017-7507
