@@ -1,4 +1,3 @@
-# gnutls-3.6.10 should need gmp-6.1 to solve undefined reference to `mpn_zero_p'
 %bcond_without dane
 %if 0%{?rhel}
 %bcond_with guile
@@ -12,8 +11,8 @@
 %global realname gnutls
 
 Name: compat-gnutls36
-Version: 3.6.8
-Release: 13%{?dist}
+Version: 3.6.15
+Release: 1%{?dist}
 Summary: A TLS protocol implementation
 # The libraries are LGPLv2.1+, utilities are GPLv3+
 License: GPLv3+ and LGPLv2+
@@ -21,38 +20,21 @@ Group: System Environment/Libraries
 URL: http://www.gnutls.org/
 Source0: ftp://ftp.gnutls.org/gcrypt/gnutls/v3.6/%{realname}-%{version}.tar.xz
 Source1: ftp://ftp.gnutls.org/gcrypt/gnutls/v3.6/%{realname}-%{version}.tar.xz.sig
-Source2: gpgkey-1F42418905D8206AA754CCDC29EE58B996865171.gpg
+Source2: gpgkey-462225C3B46F34879FC8496CD605848ED7E69871.gpg
 Patch1:	gnutls-3.2.7-rpath.patch
 Patch2: gnutls-3.6.4-no-now-guile.patch
-Patch3: gnutls-3.6.5-fix-fips-signature-post.patch
 Patch4: gnutls-3.6.8-fips-aes-cbc-kat.patch
-# need --disable-tests
-#Patch5: gnutls-3.6.8-multiple-key-updates.patch
-Patch6: gnutls-3.6.8-fips-rng-continuous.patch
-Patch7: gnutls-3.6.8-session-ticket-ub.patch
-# need --disable-tests
-#Patch8: gnutls-3.6.8-pkcs11-login-error.patch
-# depends on patch8
-#Patch9: gnutls-3.6.8-fips-deterministic-ecdsa.patch
-# depends on patch8
-#Patch10: gnutls-3.6.8-aead-cipher-encryptv2.patch
-# depends on patch8
-#Patch11: gnutls-3.6.8-fips-rsa-random-selftests.patch
-# depends on patch8
-#Patch12: gnutls-3.6.8-decr-len.patch
-# depends on patch8
-#Patch13: gnutls-3.6.8-fix-aead-cipher-encryptv2.patch
-Patch14: gnutls-3.6.8-fix-cfb8-decrypt.patch
-Patch15: gnutls-3.6.12-dtls-random.patch
-Patch16: gnutls-3.6.14-totp-init.patch
 
 BuildRequires: p11-kit-devel >= 0.21.3
 BuildRequires: gettext-devel
-BuildRequires: zlib-devel readline-devel libtasn1-devel >= 4.3
+BuildRequires: zlib-devel
+BuildRequires: readline-devel
+BuildRequires: libtasn1-devel >= 4.3
 #BuildRequires: libtool automake autoconf texinfo
 BuildRequires: autogen-libopts-devel >= 5.18 autogen
 BuildRequires: pkgconfig(nettle) >= 3.4.1
 BuildRequires: pkgconfig(hogweed) >= 3.4.1
+BuildRequires: gmp-devel > 1:6.1.0
 BuildRequires: trousers-devel >= 0.3.11.2
 BuildRequires: libidn2-devel
 BuildRequires: libunistring-devel
@@ -71,8 +53,9 @@ BuildRequires: p11-kit-trust
 BuildRequires: ca-certificates
 Requires: p11-kit-trust
 Requires: libtasn1 >= 4.3
-#Requires: nettle >= 3.4.1
+Requires: nettle >= 3.4.1
 Requires: trousers >= 0.3.11.2
+Requires: gmp > 1:6.1.0
 
 %if %{with dane}
 BuildRequires: unbound-devel
@@ -213,11 +196,12 @@ echo "SYSTEM=NORMAL" >> tests/system.prio
 # via the crypto policies
 
 %build
+
 #CCASFLAGS="$CCASFLAGS -Wa,--generate-missing-build-notes=yes"
 #export CCASFLAGS
 #rm -rf build-aux/ m4/
 #autoreconf -i
-autoreconf -v
+#autoreconf -v
 %configure \
     --disable-static \
 %if %{with fips}
@@ -379,6 +363,10 @@ make check %{?_smp_mflags}
 %endif
 
 %changelog
+* Thu Sep 24 2020 Sérgio Basto <sergio@serjux.com> - 3.6.15-1
+- Update to 3.6.15
+- gnutls-3.6.10 or later need gmp-6.1 to solve undefined reference to `mpn_zero_p'
+
 * Wed Sep 23 2020 Sérgio Basto <sergio@serjux.com> - 3.6.8-13
 - Devel package back to default location, as can't be installed along
   gnutls-devel from system
