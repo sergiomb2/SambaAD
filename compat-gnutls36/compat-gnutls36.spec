@@ -12,7 +12,7 @@
 
 Name: compat-gnutls36
 Version: 3.6.15
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: A TLS protocol implementation
 # The libraries are LGPLv2.1+, utilities are GPLv3+
 License: GPLv3+ and LGPLv2+
@@ -52,10 +52,11 @@ BuildRequires: fipscheck
 BuildRequires: p11-kit-trust
 BuildRequires: ca-certificates
 Requires: p11-kit-trust
+
 Requires: libtasn1 >= 4.3
 Requires: nettle >= 3.4.1
 Requires: trousers >= 0.3.11.2
-Requires: gmp > 1:6.1.0
+Requires: gmp >= 1:6.1.0
 
 %if %{with dane}
 BuildRequires: unbound-devel
@@ -68,15 +69,16 @@ BuildRequires: guile-devel
 Provides: bundled(gnulib) = 20130424
 
 # Handle compat packaging
-Provides: compat-gnutls34 = %{version}-release
-Obsoletes: compat-gnutls34 < %{version}-release
+Provides: compat-gnutls34 = %{version}-%{release}
+Obsoletes: compat-gnutls34 < %{version}-%{release}
+Provides: gnutls = %{version}-%{release}
 
 %package c++
 Summary: The C++ interface to GnuTLS
 Requires: %{name}%{?_isa} = %{version}-%{release}
 # Handle compat packaging
-Provides: compat-gnutls34-c++ = %{version}-release
-Obsoletes: compat-gnutls34-c++ < %{version}-release
+Provides: compat-gnutls34-c++ = %{version}-%{release}
+Obsoletes: compat-gnutls34-c++ < %{version}-%{release}
 
 %package devel
 Summary: Development files for the %{name} package
@@ -89,12 +91,14 @@ Requires: %{name}-dane%{?_isa} = %{version}-%{release}
 Requires: pkgconfig
 Requires: libtasn1-devel >= 4.3
 Requires: libidn-devel
-Requires: nettle-devel >= 3.4.1
+Requires: pkgconfig(nettle) >= 3.4.1
+Requires: pkgconfig(hogweed) >= 3.4.1
+Requires: gmp-devel >= 1:6.1.0
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 # Handle compat packaging
-Provides: compat-gnutls34-devel = %{version}-release
-Obsoletes: compat-gnutls34-devel < %{version}-release
+Provides: compat-gnutls34-devel = %{version}-%{release}
+Obsoletes: compat-gnutls34-devel < %{version}-%{release}
 
 %package utils
 License: GPLv3+
@@ -105,16 +109,16 @@ Requires: %{name}%{?_isa} = %{version}-%{release}
 Requires: %{name}-dane%{?_isa} = %{version}-%{release}
 %endif
 # Handle compat packaging
-Provides: compat-gnutls34-utils = %{version}-release
-Obsoletes: compat-gnutls34-utils < %{version}-release
+Provides: compat-gnutls34-utils = %{version}-%{release}
+Obsoletes: compat-gnutls34-utils < %{version}-%{release}
 
 %if %{with dane}
 %package dane
 Summary: A DANE protocol implementation for GnuTLS
 Requires: %{name}%{?_isa} = %{version}-%{release}
 # Handle compat packaging
-Provides: compat-gnutls34-dane = %{version}-release
-Obsoletes: compat-gnutls34-dane < %{version}-release
+Provides: compat-gnutls34-dane = %{version}-%{release}
+Obsoletes: compat-gnutls34-dane < %{version}-%{release}
 %endif
 
 %if %{with guile}
@@ -124,8 +128,8 @@ Group: Development/Libraries
 Requires: %{name}%{?_isa} = %{version}-%{release}
 Requires: guile
 # Handle compat packaging
-Provides: compat-gnutls34-guile = %{version}-release
-Obsoletes: compat-gnutls34-guile < %{version}-release
+Provides: compat-gnutls34-guile = %{version}-%{release}
+Obsoletes: compat-gnutls34-guile < %{version}-%{release}
 %endif
 
 %description
@@ -363,9 +367,14 @@ make check %{?_smp_mflags}
 %endif
 
 %changelog
+* Fri Sep 25 2020 Sérgio Basto <sergio@serjux.com> - 3.6.15-2
+- Some packaging fixes
+
 * Thu Sep 24 2020 Sérgio Basto <sergio@serjux.com> - 3.6.15-1
 - Update to 3.6.15
 - gnutls-3.6.10 or later need gmp-6.1 to solve undefined reference to `mpn_zero_p'
+  gmp-6.1.2 hopefully is 100% backward compatible to 6.0.0
+  https://abi-laboratory.pro/?view=timeline&l=gmp
 
 * Wed Sep 23 2020 Sérgio Basto <sergio@serjux.com> - 3.6.8-13
 - Devel package back to default location, as can't be installed along
