@@ -9,7 +9,7 @@
 %define talloc_version 2.1.16
 %define tdb_version 1.3.18
 %define tevent_version 0.9.39
-%define ldb_version 1.5.6
+%define ldb_version 1.5.8
 
 # This should be rc1 or nil
 %define pre_release %nil
@@ -68,7 +68,7 @@
 
 
 Name:           samba
-Version:        4.10.13
+Version:        4.10.18
 Release:        1%{?dist}
 Epoch:          3
 
@@ -122,6 +122,7 @@ BuildRequires: lmdb
 BuildRequires: ncurses-devel
 BuildRequires: openldap-devel
 BuildRequires: pam-devel
+BuildRequires: perl-interpreter
 BuildRequires: perl-generators
 BuildRequires: perl(Archive::Tar)
 BuildRequires: perl(ExtUtils::MakeMaker)
@@ -215,13 +216,9 @@ BuildRequires: bind
 BuildRequires: python2-crypto
 BuildRequires: lmdb-devel
 %endif
-%if 0%{?rhel}
-BuildRequires: compat-gnutls34-devel >= 3.4.7
-BuildRequires: compat-nettle32-devel >= 3.1.1
-%else
-BuildRequires: gnutls-devel >= 3.4.7
-BuildRequires: nettle-devel >= 3.1.1
-%endif
+BuildRequires: pkgconfig(gnutls) >= 3.6.8
+BuildRequires: pkgconfig(nettle) >= 3.4.1
+BuildRequires: pkgconfig(hogweed) >= 3.4.1
 
 Requires(pre): /usr/sbin/groupadd
 Requires(post): systemd
@@ -806,11 +803,8 @@ zcat %{SOURCE0} | gpgv2 --quiet --keyring %{SOURCE2} %{SOURCE1} -
 
 %global _samba_private_libraries %{_libsmbclient}%{_libwbclient}
 
-%if 0%{?rhel}
-export PKG_CONFIG_PATH=%{_libdir}/compat-gnutls34/pkgconfig:%{_libdir}/compat-nettle32/pkgconfig
-%endif
 
-/usr/bin/pkg-config "gnutls >= 3.4.7" --cflags --libs gnutls
+/usr/bin/pkg-config "gnutls >= 3.6.8" --cflags --libs gnutls
 
 # Avoid ./configure: line 16: python: command not found
 export PYTHON=%{__python2}
@@ -2096,7 +2090,7 @@ fi
 %if %{with clustering}
 %files -n ctdb
 %defattr(-,root,root)
-%doc ctdb/README
+#doc ctdb/README
 # Obsolete
 %config(noreplace, missingok) %{_sysconfdir}/sysconfig/ctdb
 
@@ -2161,7 +2155,7 @@ fi
 
 %files -n ctdb-tests
 %defattr(-,root,root)
-%doc ctdb/tests/README
+#doc ctdb/tests/README
 %{_bindir}/ctdb_run_tests
 %{_bindir}/ctdb_run_cluster_tests
 %{_libexecdir}/ctdb/tests/
@@ -2170,6 +2164,9 @@ fi
 %endif # with_clustering_support
 
 %changelog
+* Thu Sep 24 2020 Sérgio Basto <sergio@serjux.com> - 3:4.10.18-1
+- Update Samba to 4.10.18
+
 * Fri Jan 24 2020 Sérgio Basto <sergio@serjux.com> - 3:4.10.13-1
 - Samba-4.10.13
 
