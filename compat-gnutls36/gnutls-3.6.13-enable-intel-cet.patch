@@ -1,0 +1,7849 @@
+From 7d969e296f4a8c39a8bdc642a3234b0957531201 Mon Sep 17 00:00:00 2001
+From: Anderson Toshiyuki Sasaki <ansasaki@redhat.com>
+Date: Wed, 20 May 2020 10:51:37 +0200
+Subject: [PATCH] accelerated: Enable Intel CET
+
+Signed-off-by: Anderson Toshiyuki Sasaki <ansasaki@redhat.com>
+---
+ lib/accelerated/x86/coff/aes-ssse3-x86.s      |  13 +
+ lib/accelerated/x86/coff/aes-ssse3-x86_64.s   |   5 +
+ lib/accelerated/x86/coff/aesni-gcm-x86_64.s   |   8 +
+ lib/accelerated/x86/coff/aesni-x86.s          |  22 ++
+ lib/accelerated/x86/coff/aesni-x86_64.s       |  29 +-
+ lib/accelerated/x86/coff/e_padlock-x86.s      | 276 +++++++++-------
+ lib/accelerated/x86/coff/e_padlock-x86_64.s   | 218 ++++++++-----
+ lib/accelerated/x86/coff/ghash-x86_64.s       |   6 +
+ lib/accelerated/x86/coff/sha1-ssse3-x86.s     |   1 +
+ lib/accelerated/x86/coff/sha1-ssse3-x86_64.s  |   2 +-
+ lib/accelerated/x86/coff/sha256-ssse3-x86.s   |   1 +
+ .../x86/coff/sha256-ssse3-x86_64.s            |  18 +-
+ lib/accelerated/x86/coff/sha512-ssse3-x86.s   |   1 +
+ .../x86/coff/sha512-ssse3-x86_64.s            |  20 +-
+ lib/accelerated/x86/elf/aes-ssse3-x86.s       |  30 ++
+ lib/accelerated/x86/elf/aes-ssse3-x86_64.s    |  26 ++
+ lib/accelerated/x86/elf/aesni-gcm-x86_64.s    |  29 ++
+ lib/accelerated/x86/elf/aesni-x86.s           |  39 +++
+ lib/accelerated/x86/elf/aesni-x86_64.s        |  50 ++-
+ lib/accelerated/x86/elf/e_padlock-x86.s       | 306 ++++++++++--------
+ lib/accelerated/x86/elf/e_padlock-x86_64.s    | 242 +++++++++-----
+ lib/accelerated/x86/elf/ghash-x86_64.s        |  27 ++
+ lib/accelerated/x86/elf/sha1-ssse3-x86.s      |  18 ++
+ lib/accelerated/x86/elf/sha1-ssse3-x86_64.s   |  23 +-
+ lib/accelerated/x86/elf/sha256-ssse3-x86.s    |  18 ++
+ lib/accelerated/x86/elf/sha256-ssse3-x86_64.s |  51 ++-
+ lib/accelerated/x86/elf/sha512-ssse3-x86.s    |  18 ++
+ lib/accelerated/x86/elf/sha512-ssse3-x86_64.s |  49 ++-
+ lib/accelerated/x86/macosx/aes-ssse3-x86.s    |  13 +
+ lib/accelerated/x86/macosx/aes-ssse3-x86_64.s |   5 +
+ lib/accelerated/x86/macosx/aesni-gcm-x86_64.s |   8 +
+ lib/accelerated/x86/macosx/aesni-x86.s        |  22 ++
+ lib/accelerated/x86/macosx/aesni-x86_64.s     |  29 +-
+ lib/accelerated/x86/macosx/e_padlock-x86.s    | 288 +++++++++--------
+ lib/accelerated/x86/macosx/e_padlock-x86_64.s | 218 ++++++++-----
+ lib/accelerated/x86/macosx/ghash-x86_64.s     |   6 +
+ lib/accelerated/x86/macosx/sha1-ssse3-x86.s   |   1 +
+ .../x86/macosx/sha1-ssse3-x86_64.s            |   2 +-
+ lib/accelerated/x86/macosx/sha256-ssse3-x86.s |   1 +
+ .../x86/macosx/sha256-ssse3-x86_64.s          |  30 +-
+ lib/accelerated/x86/macosx/sha512-ssse3-x86.s |   1 +
+ .../x86/macosx/sha512-ssse3-x86_64.s          |  28 +-
+ 42 files changed, 1541 insertions(+), 657 deletions(-)
+
+diff --git a/lib/accelerated/x86/coff/aes-ssse3-x86.s b/lib/accelerated/x86/coff/aes-ssse3-x86.s
+index c58ea2359..1dced3b2a 100644
+--- a/lib/accelerated/x86/coff/aes-ssse3-x86.s
++++ b/lib/accelerated/x86/coff/aes-ssse3-x86.s
+@@ -71,6 +71,7 @@
+ .def	__vpaes_preheat;	.scl	3;	.type	32;	.endef
+ .align	16
+ __vpaes_preheat:
++.byte	243,15,30,251
+ 	addl	(%esp),%ebp
+ 	movdqa	-48(%ebp),%xmm7
+ 	movdqa	-16(%ebp),%xmm6
+@@ -78,6 +79,7 @@ __vpaes_preheat:
+ .def	__vpaes_encrypt_core;	.scl	3;	.type	32;	.endef
+ .align	16
+ __vpaes_encrypt_core:
++.byte	243,15,30,251
+ 	movl	$16,%ecx
+ 	movl	240(%edx),%eax
+ 	movdqa	%xmm6,%xmm1
+@@ -154,6 +156,7 @@ __vpaes_encrypt_core:
+ .def	__vpaes_decrypt_core;	.scl	3;	.type	32;	.endef
+ .align	16
+ __vpaes_decrypt_core:
++.byte	243,15,30,251
+ 	leal	608(%ebp),%ebx
+ 	movl	240(%edx),%eax
+ 	movdqa	%xmm6,%xmm1
+@@ -241,6 +244,7 @@ __vpaes_decrypt_core:
+ .def	__vpaes_schedule_core;	.scl	3;	.type	32;	.endef
+ .align	16
+ __vpaes_schedule_core:
++.byte	243,15,30,251
+ 	addl	(%esp),%ebp
+ 	movdqu	(%esi),%xmm0
+ 	movdqa	320(%ebp),%xmm2
+@@ -334,6 +338,7 @@ __vpaes_schedule_core:
+ .def	__vpaes_schedule_192_smear;	.scl	3;	.type	32;	.endef
+ .align	16
+ __vpaes_schedule_192_smear:
++.byte	243,15,30,251
+ 	pshufd	$128,%xmm6,%xmm1
+ 	pshufd	$254,%xmm7,%xmm0
+ 	pxor	%xmm1,%xmm6
+@@ -345,6 +350,7 @@ __vpaes_schedule_192_smear:
+ .def	__vpaes_schedule_round;	.scl	3;	.type	32;	.endef
+ .align	16
+ __vpaes_schedule_round:
++.byte	243,15,30,251
+ 	movdqa	8(%esp),%xmm2
+ 	pxor	%xmm1,%xmm1
+ .byte	102,15,58,15,202,15
+@@ -393,6 +399,7 @@ __vpaes_schedule_round:
+ .def	__vpaes_schedule_transform;	.scl	3;	.type	32;	.endef
+ .align	16
+ __vpaes_schedule_transform:
++.byte	243,15,30,251
+ 	movdqa	-16(%ebp),%xmm2
+ 	movdqa	%xmm2,%xmm1
+ 	pandn	%xmm0,%xmm1
+@@ -407,6 +414,7 @@ __vpaes_schedule_transform:
+ .def	__vpaes_schedule_mangle;	.scl	3;	.type	32;	.endef
+ .align	16
+ __vpaes_schedule_mangle:
++.byte	243,15,30,251
+ 	movdqa	%xmm0,%xmm4
+ 	movdqa	128(%ebp),%xmm5
+ 	testl	%edi,%edi
+@@ -467,6 +475,7 @@ __vpaes_schedule_mangle:
+ .align	16
+ _vpaes_set_encrypt_key:
+ .L_vpaes_set_encrypt_key_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -499,6 +508,7 @@ _vpaes_set_encrypt_key:
+ .align	16
+ _vpaes_set_decrypt_key:
+ .L_vpaes_set_decrypt_key_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -536,6 +546,7 @@ _vpaes_set_decrypt_key:
+ .align	16
+ _vpaes_encrypt:
+ .L_vpaes_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -564,6 +575,7 @@ _vpaes_encrypt:
+ .align	16
+ _vpaes_decrypt:
+ .L_vpaes_decrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -592,6 +604,7 @@ _vpaes_decrypt:
+ .align	16
+ _vpaes_cbc_encrypt:
+ .L_vpaes_cbc_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+diff --git a/lib/accelerated/x86/coff/aes-ssse3-x86_64.s b/lib/accelerated/x86/coff/aes-ssse3-x86_64.s
+index 150c9921d..f3fee5629 100644
+--- a/lib/accelerated/x86/coff/aes-ssse3-x86_64.s
++++ b/lib/accelerated/x86/coff/aes-ssse3-x86_64.s
+@@ -643,6 +643,7 @@ vpaes_set_encrypt_key:
+ 	movq	%r8,%rdx
+ 
+ 
++.byte	243,15,30,250
+ 	leaq	-184(%rsp),%rsp
+ 	movaps	%xmm6,16(%rsp)
+ 	movaps	%xmm7,32(%rsp)
+@@ -695,6 +696,7 @@ vpaes_set_decrypt_key:
+ 	movq	%r8,%rdx
+ 
+ 
++.byte	243,15,30,250
+ 	leaq	-184(%rsp),%rsp
+ 	movaps	%xmm6,16(%rsp)
+ 	movaps	%xmm7,32(%rsp)
+@@ -752,6 +754,7 @@ vpaes_encrypt:
+ 	movq	%r8,%rdx
+ 
+ 
++.byte	243,15,30,250
+ 	leaq	-184(%rsp),%rsp
+ 	movaps	%xmm6,16(%rsp)
+ 	movaps	%xmm7,32(%rsp)
+@@ -799,6 +802,7 @@ vpaes_decrypt:
+ 	movq	%r8,%rdx
+ 
+ 
++.byte	243,15,30,250
+ 	leaq	-184(%rsp),%rsp
+ 	movaps	%xmm6,16(%rsp)
+ 	movaps	%xmm7,32(%rsp)
+@@ -848,6 +852,7 @@ vpaes_cbc_encrypt:
+ 	movq	48(%rsp),%r9
+ 
+ 
++.byte	243,15,30,250
+ 	xchgq	%rcx,%rdx
+ 	subq	$16,%rcx
+ 	jc	.Lcbc_abort
+diff --git a/lib/accelerated/x86/coff/aesni-gcm-x86_64.s b/lib/accelerated/x86/coff/aesni-gcm-x86_64.s
+index 7988004cb..5784e4bcf 100644
+--- a/lib/accelerated/x86/coff/aesni-gcm-x86_64.s
++++ b/lib/accelerated/x86/coff/aesni-gcm-x86_64.s
+@@ -42,6 +42,8 @@
+ .def	_aesni_ctr32_ghash_6x;	.scl 3;	.type 32;	.endef
+ .p2align	5
+ _aesni_ctr32_ghash_6x:
++
++.byte	243,15,30,250
+ 	vmovdqu	32(%r11),%xmm2
+ 	subq	$6,%rdx
+ 	vpxor	%xmm4,%xmm4,%xmm4
+@@ -350,6 +352,7 @@ _aesni_ctr32_ghash_6x:
+ 
+ 	.byte	0xf3,0xc3
+ 
++
+ .globl	aesni_gcm_decrypt
+ .def	aesni_gcm_decrypt;	.scl 2;	.type 32;	.endef
+ .p2align	5
+@@ -366,6 +369,7 @@ aesni_gcm_decrypt:
+ 	movq	48(%rsp),%r9
+ 
+ 
++.byte	243,15,30,250
+ 	xorq	%r10,%r10
+ 	cmpq	$0x60,%rdx
+ 	jb	.Lgcm_dec_abort
+@@ -490,6 +494,8 @@ aesni_gcm_decrypt:
+ .def	_aesni_ctr32_6x;	.scl 3;	.type 32;	.endef
+ .p2align	5
+ _aesni_ctr32_6x:
++
++.byte	243,15,30,250
+ 	vmovdqu	0-128(%rcx),%xmm4
+ 	vmovdqu	32(%r11),%xmm2
+ 	leaq	-1(%rbp),%r13
+@@ -578,6 +584,7 @@ _aesni_ctr32_6x:
+ 	jmp	.Loop_ctr32
+ 
+ 
++
+ .globl	aesni_gcm_encrypt
+ .def	aesni_gcm_encrypt;	.scl 2;	.type 32;	.endef
+ .p2align	5
+@@ -594,6 +601,7 @@ aesni_gcm_encrypt:
+ 	movq	48(%rsp),%r9
+ 
+ 
++.byte	243,15,30,250
+ 	xorq	%r10,%r10
+ 	cmpq	$288,%rdx
+ 	jb	.Lgcm_enc_abort
+diff --git a/lib/accelerated/x86/coff/aesni-x86.s b/lib/accelerated/x86/coff/aesni-x86.s
+index c6aa1a1e2..577dc4af2 100644
+--- a/lib/accelerated/x86/coff/aesni-x86.s
++++ b/lib/accelerated/x86/coff/aesni-x86.s
+@@ -43,6 +43,7 @@
+ .align	16
+ _aesni_encrypt:
+ .L_aesni_encrypt_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%eax
+ 	movl	12(%esp),%edx
+ 	movups	(%eax),%xmm2
+@@ -69,6 +70,7 @@ _aesni_encrypt:
+ .align	16
+ _aesni_decrypt:
+ .L_aesni_decrypt_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%eax
+ 	movl	12(%esp),%edx
+ 	movups	(%eax),%xmm2
+@@ -93,6 +95,7 @@ _aesni_decrypt:
+ .def	__aesni_encrypt2;	.scl	3;	.type	32;	.endef
+ .align	16
+ __aesni_encrypt2:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -119,6 +122,7 @@ __aesni_encrypt2:
+ .def	__aesni_decrypt2;	.scl	3;	.type	32;	.endef
+ .align	16
+ __aesni_decrypt2:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -145,6 +149,7 @@ __aesni_decrypt2:
+ .def	__aesni_encrypt3;	.scl	3;	.type	32;	.endef
+ .align	16
+ __aesni_encrypt3:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -176,6 +181,7 @@ __aesni_encrypt3:
+ .def	__aesni_decrypt3;	.scl	3;	.type	32;	.endef
+ .align	16
+ __aesni_decrypt3:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -207,6 +213,7 @@ __aesni_decrypt3:
+ .def	__aesni_encrypt4;	.scl	3;	.type	32;	.endef
+ .align	16
+ __aesni_encrypt4:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	movups	16(%edx),%xmm1
+ 	shll	$4,%ecx
+@@ -244,6 +251,7 @@ __aesni_encrypt4:
+ .def	__aesni_decrypt4;	.scl	3;	.type	32;	.endef
+ .align	16
+ __aesni_decrypt4:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	movups	16(%edx),%xmm1
+ 	shll	$4,%ecx
+@@ -281,6 +289,7 @@ __aesni_decrypt4:
+ .def	__aesni_encrypt6;	.scl	3;	.type	32;	.endef
+ .align	16
+ __aesni_encrypt6:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -334,6 +343,7 @@ __aesni_encrypt6:
+ .def	__aesni_decrypt6;	.scl	3;	.type	32;	.endef
+ .align	16
+ __aesni_decrypt6:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -389,6 +399,7 @@ __aesni_decrypt6:
+ .align	16
+ _aesni_ecb_encrypt:
+ .L_aesni_ecb_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -623,6 +634,7 @@ _aesni_ecb_encrypt:
+ .align	16
+ _aesni_ccm64_encrypt_blocks:
+ .L_aesni_ccm64_encrypt_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -710,6 +722,7 @@ _aesni_ccm64_encrypt_blocks:
+ .align	16
+ _aesni_ccm64_decrypt_blocks:
+ .L_aesni_ccm64_decrypt_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -832,6 +845,7 @@ _aesni_ccm64_decrypt_blocks:
+ .align	16
+ _aesni_ctr32_encrypt_blocks:
+ .L_aesni_ctr32_encrypt_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -1069,6 +1083,7 @@ _aesni_ctr32_encrypt_blocks:
+ .align	16
+ _aesni_xts_encrypt:
+ .L_aesni_xts_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -1428,6 +1443,7 @@ _aesni_xts_encrypt:
+ .align	16
+ _aesni_xts_decrypt:
+ .L_aesni_xts_decrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -1817,6 +1833,7 @@ _aesni_xts_decrypt:
+ .align	16
+ _aesni_ocb_encrypt:
+ .L_aesni_ocb_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -2211,6 +2228,7 @@ _aesni_ocb_encrypt:
+ .align	16
+ _aesni_ocb_decrypt:
+ .L_aesni_ocb_decrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -2605,6 +2623,7 @@ _aesni_ocb_decrypt:
+ .align	16
+ _aesni_cbc_encrypt:
+ .L_aesni_cbc_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -2863,6 +2882,7 @@ _aesni_cbc_encrypt:
+ .def	__aesni_set_encrypt_key;	.scl	3;	.type	32;	.endef
+ .align	16
+ __aesni_set_encrypt_key:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	testl	%eax,%eax
+@@ -3197,6 +3217,7 @@ __aesni_set_encrypt_key:
+ .align	16
+ _aesni_set_encrypt_key:
+ .L_aesni_set_encrypt_key_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%eax
+ 	movl	8(%esp),%ecx
+ 	movl	12(%esp),%edx
+@@ -3207,6 +3228,7 @@ _aesni_set_encrypt_key:
+ .align	16
+ _aesni_set_decrypt_key:
+ .L_aesni_set_decrypt_key_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%eax
+ 	movl	8(%esp),%ecx
+ 	movl	12(%esp),%edx
+diff --git a/lib/accelerated/x86/coff/aesni-x86_64.s b/lib/accelerated/x86/coff/aesni-x86_64.s
+index 4e8de065f..ba2992903 100644
+--- a/lib/accelerated/x86/coff/aesni-x86_64.s
++++ b/lib/accelerated/x86/coff/aesni-x86_64.s
+@@ -44,6 +44,7 @@
+ .p2align	4
+ aesni_encrypt:
+ 
++.byte	243,15,30,250
+ 	movups	(%rcx),%xmm2
+ 	movl	240(%r8),%eax
+ 	movups	(%r8),%xmm0
+@@ -70,6 +71,7 @@ aesni_encrypt:
+ .p2align	4
+ aesni_decrypt:
+ 
++.byte	243,15,30,250
+ 	movups	(%rcx),%xmm2
+ 	movl	240(%r8),%eax
+ 	movups	(%r8),%xmm0
+@@ -567,6 +569,7 @@ aesni_ecb_encrypt:
+ 	movq	40(%rsp),%r8
+ 
+ 
++.byte	243,15,30,250
+ 	leaq	-88(%rsp),%rsp
+ 	movaps	%xmm6,(%rsp)
+ 	movaps	%xmm7,16(%rsp)
+@@ -939,6 +942,8 @@ aesni_ccm64_encrypt_blocks:
+ 	movq	40(%rsp),%r8
+ 	movq	48(%rsp),%r9
+ 
++
++.byte	243,15,30,250
+ 	leaq	-88(%rsp),%rsp
+ 	movaps	%xmm6,(%rsp)
+ 	movaps	%xmm7,16(%rsp)
+@@ -1015,6 +1020,7 @@ aesni_ccm64_encrypt_blocks:
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_aesni_ccm64_encrypt_blocks:
+ .globl	aesni_ccm64_decrypt_blocks
+ .def	aesni_ccm64_decrypt_blocks;	.scl 2;	.type 32;	.endef
+@@ -1031,6 +1037,8 @@ aesni_ccm64_decrypt_blocks:
+ 	movq	40(%rsp),%r8
+ 	movq	48(%rsp),%r9
+ 
++
++.byte	243,15,30,250
+ 	leaq	-88(%rsp),%rsp
+ 	movaps	%xmm6,(%rsp)
+ 	movaps	%xmm7,16(%rsp)
+@@ -1141,6 +1149,7 @@ aesni_ccm64_decrypt_blocks:
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_aesni_ccm64_decrypt_blocks:
+ .globl	aesni_ctr32_encrypt_blocks
+ .def	aesni_ctr32_encrypt_blocks;	.scl 2;	.type 32;	.endef
+@@ -1157,6 +1166,7 @@ aesni_ctr32_encrypt_blocks:
+ 	movq	40(%rsp),%r8
+ 
+ 
++.byte	243,15,30,250
+ 	cmpq	$1,%rdx
+ 	jne	.Lctr32_bulk
+ 
+@@ -1769,6 +1779,7 @@ aesni_xts_encrypt:
+ 	movq	48(%rsp),%r9
+ 
+ 
++.byte	243,15,30,250
+ 	leaq	(%rsp),%r11
+ 
+ 	pushq	%rbp
+@@ -2273,6 +2284,7 @@ aesni_xts_decrypt:
+ 	movq	48(%rsp),%r9
+ 
+ 
++.byte	243,15,30,250
+ 	leaq	(%rsp),%r11
+ 
+ 	pushq	%rbp
+@@ -2814,6 +2826,7 @@ aesni_ocb_encrypt:
+ 	movq	48(%rsp),%r9
+ 
+ 
++.byte	243,15,30,250
+ 	leaq	(%rsp),%rax
+ 	pushq	%rbx
+ 
+@@ -3046,6 +3059,7 @@ aesni_ocb_encrypt:
+ .def	__ocb_encrypt6;	.scl 3;	.type 32;	.endef
+ .p2align	5
+ __ocb_encrypt6:
++
+ 	pxor	%xmm9,%xmm15
+ 	movdqu	(%rbx,%r12,1),%xmm11
+ 	movdqa	%xmm10,%xmm12
+@@ -3145,9 +3159,11 @@ __ocb_encrypt6:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .def	__ocb_encrypt4;	.scl 3;	.type 32;	.endef
+ .p2align	5
+ __ocb_encrypt4:
++
+ 	pxor	%xmm9,%xmm15
+ 	movdqu	(%rbx,%r12,1),%xmm11
+ 	movdqa	%xmm10,%xmm12
+@@ -3214,9 +3230,11 @@ __ocb_encrypt4:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .def	__ocb_encrypt1;	.scl 3;	.type 32;	.endef
+ .p2align	5
+ __ocb_encrypt1:
++
+ 	pxor	%xmm15,%xmm7
+ 	pxor	%xmm9,%xmm7
+ 	pxor	%xmm2,%xmm8
+@@ -3249,6 +3267,7 @@ __ocb_encrypt1:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	aesni_ocb_decrypt
+ .def	aesni_ocb_decrypt;	.scl 2;	.type 32;	.endef
+ .p2align	5
+@@ -3265,6 +3284,7 @@ aesni_ocb_decrypt:
+ 	movq	48(%rsp),%r9
+ 
+ 
++.byte	243,15,30,250
+ 	leaq	(%rsp),%rax
+ 	pushq	%rbx
+ 
+@@ -3519,6 +3539,7 @@ aesni_ocb_decrypt:
+ .def	__ocb_decrypt6;	.scl 3;	.type 32;	.endef
+ .p2align	5
+ __ocb_decrypt6:
++
+ 	pxor	%xmm9,%xmm15
+ 	movdqu	(%rbx,%r12,1),%xmm11
+ 	movdqa	%xmm10,%xmm12
+@@ -3612,9 +3633,11 @@ __ocb_decrypt6:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .def	__ocb_decrypt4;	.scl 3;	.type 32;	.endef
+ .p2align	5
+ __ocb_decrypt4:
++
+ 	pxor	%xmm9,%xmm15
+ 	movdqu	(%rbx,%r12,1),%xmm11
+ 	movdqa	%xmm10,%xmm12
+@@ -3677,9 +3700,11 @@ __ocb_decrypt4:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .def	__ocb_decrypt1;	.scl 3;	.type 32;	.endef
+ .p2align	5
+ __ocb_decrypt1:
++
+ 	pxor	%xmm15,%xmm7
+ 	pxor	%xmm9,%xmm7
+ 	pxor	%xmm7,%xmm2
+@@ -3710,6 +3735,7 @@ __ocb_decrypt1:
+ .byte	102,15,56,223,215
+ 	.byte	0xf3,0xc3
+ 
++
+ .globl	aesni_cbc_encrypt
+ .def	aesni_cbc_encrypt;	.scl 2;	.type 32;	.endef
+ .p2align	4
+@@ -3726,6 +3752,7 @@ aesni_cbc_encrypt:
+ 	movq	48(%rsp),%r9
+ 
+ 
++.byte	243,15,30,250
+ 	testq	%rdx,%rdx
+ 	jz	.Lcbc_ret
+ 
+@@ -4687,7 +4714,6 @@ __aesni_set_encrypt_key:
+ 	addq	$8,%rsp
+ 
+ 	.byte	0xf3,0xc3
+-
+ .LSEH_end_set_encrypt_key:
+ 
+ .p2align	4
+@@ -4760,6 +4786,7 @@ __aesni_set_encrypt_key:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .p2align	6
+ .Lbswap_mask:
+ .byte	15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0
+diff --git a/lib/accelerated/x86/coff/e_padlock-x86.s b/lib/accelerated/x86/coff/e_padlock-x86.s
+index 41f87b117..9e27b9324 100644
+--- a/lib/accelerated/x86/coff/e_padlock-x86.s
++++ b/lib/accelerated/x86/coff/e_padlock-x86.s
+@@ -1,4 +1,4 @@
+-# Copyright (c) 2011-2013, Andy Polyakov <appro@openssl.org>
++# Copyright (c) 2011-2016, Andy Polyakov <appro@openssl.org>
+ # All rights reserved.
+ #
+ # Redistribution and use in source and binary forms, with or without
+@@ -37,13 +37,13 @@
+ #
+ # *** This file is auto-generated ***
+ #
+-.file	"devel/perlasm/e_padlock-x86.s"
+ .text
+ .globl	_padlock_capability
+ .def	_padlock_capability;	.scl	2;	.type	32;	.endef
+ .align	16
+ _padlock_capability:
+ .L_padlock_capability_begin:
++.byte	243,15,30,251
+ 	pushl	%ebx
+ 	pushfl
+ 	popl	%eax
+@@ -60,11 +60,20 @@ _padlock_capability:
+ 	.byte	0x0f,0xa2
+ 	xorl	%eax,%eax
+ 	cmpl	$0x746e6543,%ebx
+-	jne	.L000noluck
++	jne	.L001zhaoxin
+ 	cmpl	$0x48727561,%edx
+ 	jne	.L000noluck
+ 	cmpl	$0x736c7561,%ecx
+ 	jne	.L000noluck
++	jmp	.L002zhaoxinEnd
++.L001zhaoxin:
++	cmpl	$0x68532020,%ebx
++	jne	.L000noluck
++	cmpl	$0x68676e61,%edx
++	jne	.L000noluck
++	cmpl	$0x20206961,%ecx
++	jne	.L000noluck
++.L002zhaoxinEnd:
+ 	movl	$3221225472,%eax
+ 	.byte	0x0f,0xa2
+ 	movl	%eax,%edx
+@@ -94,38 +103,41 @@ _padlock_capability:
+ .align	16
+ _padlock_key_bswap:
+ .L_padlock_key_bswap_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%edx
+ 	movl	240(%edx),%ecx
+-.L001bswap_loop:
++.L003bswap_loop:
+ 	movl	(%edx),%eax
+ 	bswap	%eax
+ 	movl	%eax,(%edx)
+ 	leal	4(%edx),%edx
+ 	subl	$1,%ecx
+-	jnz	.L001bswap_loop
++	jnz	.L003bswap_loop
+ 	ret
+ .globl	_padlock_verify_context
+ .def	_padlock_verify_context;	.scl	2;	.type	32;	.endef
+ .align	16
+ _padlock_verify_context:
+ .L_padlock_verify_context_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%edx
+ 	leal	.Lpadlock_saved_context,%eax
+ 	pushfl
+ 	call	__padlock_verify_ctx
+-.L002verify_pic_point:
++.L004verify_pic_point:
+ 	leal	4(%esp),%esp
+ 	ret
+ .def	__padlock_verify_ctx;	.scl	3;	.type	32;	.endef
+ .align	16
+ __padlock_verify_ctx:
++.byte	243,15,30,251
+ 	btl	$30,4(%esp)
+-	jnc	.L003verified
++	jnc	.L005verified
+ 	cmpl	(%eax),%edx
+-	je	.L003verified
++	je	.L005verified
+ 	pushfl
+ 	popfl
+-.L003verified:
++.L005verified:
+ 	movl	%edx,(%eax)
+ 	ret
+ .globl	_padlock_reload_key
+@@ -133,6 +145,7 @@ __padlock_verify_ctx:
+ .align	16
+ _padlock_reload_key:
+ .L_padlock_reload_key_begin:
++.byte	243,15,30,251
+ 	pushfl
+ 	popfl
+ 	ret
+@@ -141,6 +154,7 @@ _padlock_reload_key:
+ .align	16
+ _padlock_aes_block:
+ .L_padlock_aes_block_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	pushl	%ebx
+@@ -160,6 +174,7 @@ _padlock_aes_block:
+ .align	16
+ _padlock_ecb_encrypt:
+ .L_padlock_ecb_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -169,25 +184,25 @@ _padlock_ecb_encrypt:
+ 	movl	28(%esp),%edx
+ 	movl	32(%esp),%ecx
+ 	testl	$15,%edx
+-	jnz	.L004ecb_abort
++	jnz	.L006ecb_abort
+ 	testl	$15,%ecx
+-	jnz	.L004ecb_abort
++	jnz	.L006ecb_abort
+ 	leal	.Lpadlock_saved_context,%eax
+ 	pushfl
+ 	cld
+ 	call	__padlock_verify_ctx
+-.L005ecb_pic_point:
++.L007ecb_pic_point:
+ 	leal	16(%edx),%edx
+ 	xorl	%eax,%eax
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%edx)
+-	jnz	.L006ecb_aligned
++	jnz	.L008ecb_aligned
+ 	testl	$15,%edi
+ 	setz	%al
+ 	testl	$15,%esi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+-	jnz	.L006ecb_aligned
++	jnz	.L008ecb_aligned
+ 	negl	%eax
+ 	movl	$512,%ebx
+ 	notl	%eax
+@@ -206,7 +221,7 @@ _padlock_ecb_encrypt:
+ 	andl	$-16,%esp
+ 	movl	%eax,16(%ebp)
+ 	cmpl	%ebx,%ecx
+-	ja	.L007ecb_loop
++	ja	.L009ecb_loop
+ 	movl	%esi,%eax
+ 	cmpl	%esp,%ebp
+ 	cmovel	%edi,%eax
+@@ -217,10 +232,10 @@ _padlock_ecb_encrypt:
+ 	movl	$-128,%eax
+ 	cmovael	%ebx,%eax
+ 	andl	%eax,%ebx
+-	jz	.L008ecb_unaligned_tail
+-	jmp	.L007ecb_loop
++	jz	.L010ecb_unaligned_tail
++	jmp	.L009ecb_loop
+ .align	16
+-.L007ecb_loop:
++.L009ecb_loop:
+ 	movl	%edi,(%ebp)
+ 	movl	%esi,4(%ebp)
+ 	movl	%ecx,8(%ebp)
+@@ -229,13 +244,13 @@ _padlock_ecb_encrypt:
+ 	testl	$15,%edi
+ 	cmovnzl	%esp,%edi
+ 	testl	$15,%esi
+-	jz	.L009ecb_inp_aligned
++	jz	.L011ecb_inp_aligned
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+ 	movl	%ebx,%ecx
+ 	movl	%edi,%esi
+-.L009ecb_inp_aligned:
++.L011ecb_inp_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+@@ -243,23 +258,23 @@ _padlock_ecb_encrypt:
+ 	movl	(%ebp),%edi
+ 	movl	12(%ebp),%ebx
+ 	testl	$15,%edi
+-	jz	.L010ecb_out_aligned
++	jz	.L012ecb_out_aligned
+ 	movl	%ebx,%ecx
+ 	leal	(%esp),%esi
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+-.L010ecb_out_aligned:
++.L012ecb_out_aligned:
+ 	movl	4(%ebp),%esi
+ 	movl	8(%ebp),%ecx
+ 	addl	%ebx,%edi
+ 	addl	%ebx,%esi
+ 	subl	%ebx,%ecx
+ 	movl	$512,%ebx
+-	jz	.L011ecb_break
++	jz	.L013ecb_break
+ 	cmpl	%ebx,%ecx
+-	jae	.L007ecb_loop
+-.L008ecb_unaligned_tail:
++	jae	.L009ecb_loop
++.L010ecb_unaligned_tail:
+ 	xorl	%eax,%eax
+ 	cmpl	%ebp,%esp
+ 	cmovel	%ecx,%eax
+@@ -272,24 +287,24 @@ _padlock_ecb_encrypt:
+ 	movl	%esp,%esi
+ 	movl	%eax,%edi
+ 	movl	%ebx,%ecx
+-	jmp	.L007ecb_loop
++	jmp	.L009ecb_loop
+ .align	16
+-.L011ecb_break:
++.L013ecb_break:
+ 	cmpl	%ebp,%esp
+-	je	.L012ecb_done
++	je	.L014ecb_done
+ 	pxor	%xmm0,%xmm0
+ 	leal	(%esp),%eax
+-.L013ecb_bzero:
++.L015ecb_bzero:
+ 	movaps	%xmm0,(%eax)
+ 	leal	16(%eax),%eax
+ 	cmpl	%eax,%ebp
+-	ja	.L013ecb_bzero
+-.L012ecb_done:
++	ja	.L015ecb_bzero
++.L014ecb_done:
+ 	movl	16(%ebp),%ebp
+ 	leal	24(%ebp),%esp
+-	jmp	.L014ecb_exit
++	jmp	.L016ecb_exit
+ .align	16
+-.L006ecb_aligned:
++.L008ecb_aligned:
+ 	leal	(%esi,%ecx,1),%ebp
+ 	negl	%ebp
+ 	andl	$4095,%ebp
+@@ -299,14 +314,14 @@ _padlock_ecb_encrypt:
+ 	cmovael	%eax,%ebp
+ 	andl	%ecx,%ebp
+ 	subl	%ebp,%ecx
+-	jz	.L015ecb_aligned_tail
++	jz	.L017ecb_aligned_tail
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+ .byte	243,15,167,200
+ 	testl	%ebp,%ebp
+-	jz	.L014ecb_exit
+-.L015ecb_aligned_tail:
++	jz	.L016ecb_exit
++.L017ecb_aligned_tail:
+ 	movl	%ebp,%ecx
+ 	leal	-24(%esp),%ebp
+ 	movl	%ebp,%esp
+@@ -323,11 +338,11 @@ _padlock_ecb_encrypt:
+ 	movl	%esp,%esi
+ 	movl	%eax,%edi
+ 	movl	%ebx,%ecx
+-	jmp	.L007ecb_loop
+-.L014ecb_exit:
++	jmp	.L009ecb_loop
++.L016ecb_exit:
+ 	movl	$1,%eax
+ 	leal	4(%esp),%esp
+-.L004ecb_abort:
++.L006ecb_abort:
+ 	popl	%edi
+ 	popl	%esi
+ 	popl	%ebx
+@@ -338,6 +353,7 @@ _padlock_ecb_encrypt:
+ .align	16
+ _padlock_cbc_encrypt:
+ .L_padlock_cbc_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -347,25 +363,25 @@ _padlock_cbc_encrypt:
+ 	movl	28(%esp),%edx
+ 	movl	32(%esp),%ecx
+ 	testl	$15,%edx
+-	jnz	.L016cbc_abort
++	jnz	.L018cbc_abort
+ 	testl	$15,%ecx
+-	jnz	.L016cbc_abort
++	jnz	.L018cbc_abort
+ 	leal	.Lpadlock_saved_context,%eax
+ 	pushfl
+ 	cld
+ 	call	__padlock_verify_ctx
+-.L017cbc_pic_point:
++.L019cbc_pic_point:
+ 	leal	16(%edx),%edx
+ 	xorl	%eax,%eax
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%edx)
+-	jnz	.L018cbc_aligned
++	jnz	.L020cbc_aligned
+ 	testl	$15,%edi
+ 	setz	%al
+ 	testl	$15,%esi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+-	jnz	.L018cbc_aligned
++	jnz	.L020cbc_aligned
+ 	negl	%eax
+ 	movl	$512,%ebx
+ 	notl	%eax
+@@ -384,7 +400,7 @@ _padlock_cbc_encrypt:
+ 	andl	$-16,%esp
+ 	movl	%eax,16(%ebp)
+ 	cmpl	%ebx,%ecx
+-	ja	.L019cbc_loop
++	ja	.L021cbc_loop
+ 	movl	%esi,%eax
+ 	cmpl	%esp,%ebp
+ 	cmovel	%edi,%eax
+@@ -395,10 +411,10 @@ _padlock_cbc_encrypt:
+ 	movl	$-64,%eax
+ 	cmovael	%ebx,%eax
+ 	andl	%eax,%ebx
+-	jz	.L020cbc_unaligned_tail
+-	jmp	.L019cbc_loop
++	jz	.L022cbc_unaligned_tail
++	jmp	.L021cbc_loop
+ .align	16
+-.L019cbc_loop:
++.L021cbc_loop:
+ 	movl	%edi,(%ebp)
+ 	movl	%esi,4(%ebp)
+ 	movl	%ecx,8(%ebp)
+@@ -407,13 +423,13 @@ _padlock_cbc_encrypt:
+ 	testl	$15,%edi
+ 	cmovnzl	%esp,%edi
+ 	testl	$15,%esi
+-	jz	.L021cbc_inp_aligned
++	jz	.L023cbc_inp_aligned
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+ 	movl	%ebx,%ecx
+ 	movl	%edi,%esi
+-.L021cbc_inp_aligned:
++.L023cbc_inp_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+@@ -423,23 +439,23 @@ _padlock_cbc_encrypt:
+ 	movl	(%ebp),%edi
+ 	movl	12(%ebp),%ebx
+ 	testl	$15,%edi
+-	jz	.L022cbc_out_aligned
++	jz	.L024cbc_out_aligned
+ 	movl	%ebx,%ecx
+ 	leal	(%esp),%esi
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+-.L022cbc_out_aligned:
++.L024cbc_out_aligned:
+ 	movl	4(%ebp),%esi
+ 	movl	8(%ebp),%ecx
+ 	addl	%ebx,%edi
+ 	addl	%ebx,%esi
+ 	subl	%ebx,%ecx
+ 	movl	$512,%ebx
+-	jz	.L023cbc_break
++	jz	.L025cbc_break
+ 	cmpl	%ebx,%ecx
+-	jae	.L019cbc_loop
+-.L020cbc_unaligned_tail:
++	jae	.L021cbc_loop
++.L022cbc_unaligned_tail:
+ 	xorl	%eax,%eax
+ 	cmpl	%ebp,%esp
+ 	cmovel	%ecx,%eax
+@@ -452,24 +468,24 @@ _padlock_cbc_encrypt:
+ 	movl	%esp,%esi
+ 	movl	%eax,%edi
+ 	movl	%ebx,%ecx
+-	jmp	.L019cbc_loop
++	jmp	.L021cbc_loop
+ .align	16
+-.L023cbc_break:
++.L025cbc_break:
+ 	cmpl	%ebp,%esp
+-	je	.L024cbc_done
++	je	.L026cbc_done
+ 	pxor	%xmm0,%xmm0
+ 	leal	(%esp),%eax
+-.L025cbc_bzero:
++.L027cbc_bzero:
+ 	movaps	%xmm0,(%eax)
+ 	leal	16(%eax),%eax
+ 	cmpl	%eax,%ebp
+-	ja	.L025cbc_bzero
+-.L024cbc_done:
++	ja	.L027cbc_bzero
++.L026cbc_done:
+ 	movl	16(%ebp),%ebp
+ 	leal	24(%ebp),%esp
+-	jmp	.L026cbc_exit
++	jmp	.L028cbc_exit
+ .align	16
+-.L018cbc_aligned:
++.L020cbc_aligned:
+ 	leal	(%esi,%ecx,1),%ebp
+ 	negl	%ebp
+ 	andl	$4095,%ebp
+@@ -479,7 +495,7 @@ _padlock_cbc_encrypt:
+ 	cmovael	%eax,%ebp
+ 	andl	%ecx,%ebp
+ 	subl	%ebp,%ecx
+-	jz	.L027cbc_aligned_tail
++	jz	.L029cbc_aligned_tail
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+@@ -487,8 +503,8 @@ _padlock_cbc_encrypt:
+ 	movaps	(%eax),%xmm0
+ 	movaps	%xmm0,-16(%edx)
+ 	testl	%ebp,%ebp
+-	jz	.L026cbc_exit
+-.L027cbc_aligned_tail:
++	jz	.L028cbc_exit
++.L029cbc_aligned_tail:
+ 	movl	%ebp,%ecx
+ 	leal	-24(%esp),%ebp
+ 	movl	%ebp,%esp
+@@ -505,11 +521,11 @@ _padlock_cbc_encrypt:
+ 	movl	%esp,%esi
+ 	movl	%eax,%edi
+ 	movl	%ebx,%ecx
+-	jmp	.L019cbc_loop
+-.L026cbc_exit:
++	jmp	.L021cbc_loop
++.L028cbc_exit:
+ 	movl	$1,%eax
+ 	leal	4(%esp),%esp
+-.L016cbc_abort:
++.L018cbc_abort:
+ 	popl	%edi
+ 	popl	%esi
+ 	popl	%ebx
+@@ -520,6 +536,7 @@ _padlock_cbc_encrypt:
+ .align	16
+ _padlock_cfb_encrypt:
+ .L_padlock_cfb_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -529,25 +546,25 @@ _padlock_cfb_encrypt:
+ 	movl	28(%esp),%edx
+ 	movl	32(%esp),%ecx
+ 	testl	$15,%edx
+-	jnz	.L028cfb_abort
++	jnz	.L030cfb_abort
+ 	testl	$15,%ecx
+-	jnz	.L028cfb_abort
++	jnz	.L030cfb_abort
+ 	leal	.Lpadlock_saved_context,%eax
+ 	pushfl
+ 	cld
+ 	call	__padlock_verify_ctx
+-.L029cfb_pic_point:
++.L031cfb_pic_point:
+ 	leal	16(%edx),%edx
+ 	xorl	%eax,%eax
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%edx)
+-	jnz	.L030cfb_aligned
++	jnz	.L032cfb_aligned
+ 	testl	$15,%edi
+ 	setz	%al
+ 	testl	$15,%esi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+-	jnz	.L030cfb_aligned
++	jnz	.L032cfb_aligned
+ 	negl	%eax
+ 	movl	$512,%ebx
+ 	notl	%eax
+@@ -565,9 +582,9 @@ _padlock_cfb_encrypt:
+ 	andl	$-16,%ebp
+ 	andl	$-16,%esp
+ 	movl	%eax,16(%ebp)
+-	jmp	.L031cfb_loop
++	jmp	.L033cfb_loop
+ .align	16
+-.L031cfb_loop:
++.L033cfb_loop:
+ 	movl	%edi,(%ebp)
+ 	movl	%esi,4(%ebp)
+ 	movl	%ecx,8(%ebp)
+@@ -576,13 +593,13 @@ _padlock_cfb_encrypt:
+ 	testl	$15,%edi
+ 	cmovnzl	%esp,%edi
+ 	testl	$15,%esi
+-	jz	.L032cfb_inp_aligned
++	jz	.L034cfb_inp_aligned
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+ 	movl	%ebx,%ecx
+ 	movl	%edi,%esi
+-.L032cfb_inp_aligned:
++.L034cfb_inp_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+@@ -592,45 +609,45 @@ _padlock_cfb_encrypt:
+ 	movl	(%ebp),%edi
+ 	movl	12(%ebp),%ebx
+ 	testl	$15,%edi
+-	jz	.L033cfb_out_aligned
++	jz	.L035cfb_out_aligned
+ 	movl	%ebx,%ecx
+ 	leal	(%esp),%esi
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+-.L033cfb_out_aligned:
++.L035cfb_out_aligned:
+ 	movl	4(%ebp),%esi
+ 	movl	8(%ebp),%ecx
+ 	addl	%ebx,%edi
+ 	addl	%ebx,%esi
+ 	subl	%ebx,%ecx
+ 	movl	$512,%ebx
+-	jnz	.L031cfb_loop
++	jnz	.L033cfb_loop
+ 	cmpl	%ebp,%esp
+-	je	.L034cfb_done
++	je	.L036cfb_done
+ 	pxor	%xmm0,%xmm0
+ 	leal	(%esp),%eax
+-.L035cfb_bzero:
++.L037cfb_bzero:
+ 	movaps	%xmm0,(%eax)
+ 	leal	16(%eax),%eax
+ 	cmpl	%eax,%ebp
+-	ja	.L035cfb_bzero
+-.L034cfb_done:
++	ja	.L037cfb_bzero
++.L036cfb_done:
+ 	movl	16(%ebp),%ebp
+ 	leal	24(%ebp),%esp
+-	jmp	.L036cfb_exit
++	jmp	.L038cfb_exit
+ .align	16
+-.L030cfb_aligned:
++.L032cfb_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+ .byte	243,15,167,224
+ 	movaps	(%eax),%xmm0
+ 	movaps	%xmm0,-16(%edx)
+-.L036cfb_exit:
++.L038cfb_exit:
+ 	movl	$1,%eax
+ 	leal	4(%esp),%esp
+-.L028cfb_abort:
++.L030cfb_abort:
+ 	popl	%edi
+ 	popl	%esi
+ 	popl	%ebx
+@@ -641,6 +658,7 @@ _padlock_cfb_encrypt:
+ .align	16
+ _padlock_ofb_encrypt:
+ .L_padlock_ofb_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -650,25 +668,25 @@ _padlock_ofb_encrypt:
+ 	movl	28(%esp),%edx
+ 	movl	32(%esp),%ecx
+ 	testl	$15,%edx
+-	jnz	.L037ofb_abort
++	jnz	.L039ofb_abort
+ 	testl	$15,%ecx
+-	jnz	.L037ofb_abort
++	jnz	.L039ofb_abort
+ 	leal	.Lpadlock_saved_context,%eax
+ 	pushfl
+ 	cld
+ 	call	__padlock_verify_ctx
+-.L038ofb_pic_point:
++.L040ofb_pic_point:
+ 	leal	16(%edx),%edx
+ 	xorl	%eax,%eax
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%edx)
+-	jnz	.L039ofb_aligned
++	jnz	.L041ofb_aligned
+ 	testl	$15,%edi
+ 	setz	%al
+ 	testl	$15,%esi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+-	jnz	.L039ofb_aligned
++	jnz	.L041ofb_aligned
+ 	negl	%eax
+ 	movl	$512,%ebx
+ 	notl	%eax
+@@ -686,9 +704,9 @@ _padlock_ofb_encrypt:
+ 	andl	$-16,%ebp
+ 	andl	$-16,%esp
+ 	movl	%eax,16(%ebp)
+-	jmp	.L040ofb_loop
++	jmp	.L042ofb_loop
+ .align	16
+-.L040ofb_loop:
++.L042ofb_loop:
+ 	movl	%edi,(%ebp)
+ 	movl	%esi,4(%ebp)
+ 	movl	%ecx,8(%ebp)
+@@ -697,13 +715,13 @@ _padlock_ofb_encrypt:
+ 	testl	$15,%edi
+ 	cmovnzl	%esp,%edi
+ 	testl	$15,%esi
+-	jz	.L041ofb_inp_aligned
++	jz	.L043ofb_inp_aligned
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+ 	movl	%ebx,%ecx
+ 	movl	%edi,%esi
+-.L041ofb_inp_aligned:
++.L043ofb_inp_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+@@ -713,45 +731,45 @@ _padlock_ofb_encrypt:
+ 	movl	(%ebp),%edi
+ 	movl	12(%ebp),%ebx
+ 	testl	$15,%edi
+-	jz	.L042ofb_out_aligned
++	jz	.L044ofb_out_aligned
+ 	movl	%ebx,%ecx
+ 	leal	(%esp),%esi
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+-.L042ofb_out_aligned:
++.L044ofb_out_aligned:
+ 	movl	4(%ebp),%esi
+ 	movl	8(%ebp),%ecx
+ 	addl	%ebx,%edi
+ 	addl	%ebx,%esi
+ 	subl	%ebx,%ecx
+ 	movl	$512,%ebx
+-	jnz	.L040ofb_loop
++	jnz	.L042ofb_loop
+ 	cmpl	%ebp,%esp
+-	je	.L043ofb_done
++	je	.L045ofb_done
+ 	pxor	%xmm0,%xmm0
+ 	leal	(%esp),%eax
+-.L044ofb_bzero:
++.L046ofb_bzero:
+ 	movaps	%xmm0,(%eax)
+ 	leal	16(%eax),%eax
+ 	cmpl	%eax,%ebp
+-	ja	.L044ofb_bzero
+-.L043ofb_done:
++	ja	.L046ofb_bzero
++.L045ofb_done:
+ 	movl	16(%ebp),%ebp
+ 	leal	24(%ebp),%esp
+-	jmp	.L045ofb_exit
++	jmp	.L047ofb_exit
+ .align	16
+-.L039ofb_aligned:
++.L041ofb_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+ .byte	243,15,167,232
+ 	movaps	(%eax),%xmm0
+ 	movaps	%xmm0,-16(%edx)
+-.L045ofb_exit:
++.L047ofb_exit:
+ 	movl	$1,%eax
+ 	leal	4(%esp),%esp
+-.L037ofb_abort:
++.L039ofb_abort:
+ 	popl	%edi
+ 	popl	%esi
+ 	popl	%ebx
+@@ -762,6 +780,7 @@ _padlock_ofb_encrypt:
+ .align	16
+ _padlock_ctr32_encrypt:
+ .L_padlock_ctr32_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -771,14 +790,14 @@ _padlock_ctr32_encrypt:
+ 	movl	28(%esp),%edx
+ 	movl	32(%esp),%ecx
+ 	testl	$15,%edx
+-	jnz	.L046ctr32_abort
++	jnz	.L048ctr32_abort
+ 	testl	$15,%ecx
+-	jnz	.L046ctr32_abort
++	jnz	.L048ctr32_abort
+ 	leal	.Lpadlock_saved_context,%eax
+ 	pushfl
+ 	cld
+ 	call	__padlock_verify_ctx
+-.L047ctr32_pic_point:
++.L049ctr32_pic_point:
+ 	leal	16(%edx),%edx
+ 	xorl	%eax,%eax
+ 	movq	-16(%edx),%mm0
+@@ -798,9 +817,9 @@ _padlock_ctr32_encrypt:
+ 	andl	$-16,%ebp
+ 	andl	$-16,%esp
+ 	movl	%eax,16(%ebp)
+-	jmp	.L048ctr32_loop
++	jmp	.L050ctr32_loop
+ .align	16
+-.L048ctr32_loop:
++.L050ctr32_loop:
+ 	movl	%edi,(%ebp)
+ 	movl	%esi,4(%ebp)
+ 	movl	%ecx,8(%ebp)
+@@ -809,7 +828,7 @@ _padlock_ctr32_encrypt:
+ 	movl	-4(%edx),%ecx
+ 	xorl	%edi,%edi
+ 	movl	-8(%edx),%eax
+-.L049ctr32_prepare:
++.L051ctr32_prepare:
+ 	movl	%ecx,12(%esp,%edi,1)
+ 	bswap	%ecx
+ 	movq	%mm0,(%esp,%edi,1)
+@@ -818,7 +837,7 @@ _padlock_ctr32_encrypt:
+ 	bswap	%ecx
+ 	leal	16(%edi),%edi
+ 	cmpl	%ebx,%edi
+-	jb	.L049ctr32_prepare
++	jb	.L051ctr32_prepare
+ 	movl	%ecx,-4(%edx)
+ 	leal	(%esp),%esi
+ 	leal	(%esp),%edi
+@@ -831,33 +850,33 @@ _padlock_ctr32_encrypt:
+ 	movl	12(%ebp),%ebx
+ 	movl	4(%ebp),%esi
+ 	xorl	%ecx,%ecx
+-.L050ctr32_xor:
++.L052ctr32_xor:
+ 	movups	(%esi,%ecx,1),%xmm1
+ 	leal	16(%ecx),%ecx
+ 	pxor	-16(%esp,%ecx,1),%xmm1
+ 	movups	%xmm1,-16(%edi,%ecx,1)
+ 	cmpl	%ebx,%ecx
+-	jb	.L050ctr32_xor
++	jb	.L052ctr32_xor
+ 	movl	8(%ebp),%ecx
+ 	addl	%ebx,%edi
+ 	addl	%ebx,%esi
+ 	subl	%ebx,%ecx
+ 	movl	$512,%ebx
+-	jnz	.L048ctr32_loop
++	jnz	.L050ctr32_loop
+ 	pxor	%xmm0,%xmm0
+ 	leal	(%esp),%eax
+-.L051ctr32_bzero:
++.L053ctr32_bzero:
+ 	movaps	%xmm0,(%eax)
+ 	leal	16(%eax),%eax
+ 	cmpl	%eax,%ebp
+-	ja	.L051ctr32_bzero
+-.L052ctr32_done:
++	ja	.L053ctr32_bzero
++.L054ctr32_done:
+ 	movl	16(%ebp),%ebp
+ 	leal	24(%ebp),%esp
+ 	movl	$1,%eax
+ 	leal	4(%esp),%esp
+ 	emms
+-.L046ctr32_abort:
++.L048ctr32_abort:
+ 	popl	%edi
+ 	popl	%esi
+ 	popl	%ebx
+@@ -868,6 +887,7 @@ _padlock_ctr32_encrypt:
+ .align	16
+ _padlock_xstore:
+ .L_padlock_xstore_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	movl	8(%esp),%edi
+ 	movl	12(%esp),%edx
+@@ -877,20 +897,22 @@ _padlock_xstore:
+ .def	__win32_segv_handler;	.scl	3;	.type	32;	.endef
+ .align	16
+ __win32_segv_handler:
++.byte	243,15,30,251
+ 	movl	$1,%eax
+ 	movl	4(%esp),%edx
+ 	movl	12(%esp),%ecx
+ 	cmpl	$3221225477,(%edx)
+-	jne	.L053ret
++	jne	.L055ret
+ 	addl	$4,184(%ecx)
+ 	movl	$0,%eax
+-.L053ret:
++.L055ret:
+ 	ret
+ .globl	_padlock_sha1_oneshot
+ .def	_padlock_sha1_oneshot;	.scl	2;	.type	32;	.endef
+ .align	16
+ _padlock_sha1_oneshot:
+ .L_padlock_sha1_oneshot_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	xorl	%eax,%eax
+@@ -926,6 +948,7 @@ _padlock_sha1_oneshot:
+ .align	16
+ _padlock_sha1_blocks:
+ .L_padlock_sha1_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	movl	12(%esp),%edi
+@@ -955,6 +978,7 @@ _padlock_sha1_blocks:
+ .align	16
+ _padlock_sha256_oneshot:
+ .L_padlock_sha256_oneshot_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	xorl	%eax,%eax
+@@ -990,6 +1014,7 @@ _padlock_sha256_oneshot:
+ .align	16
+ _padlock_sha256_blocks:
+ .L_padlock_sha256_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	movl	12(%esp),%edi
+@@ -1019,6 +1044,7 @@ _padlock_sha256_blocks:
+ .align	16
+ _padlock_sha512_blocks:
+ .L_padlock_sha512_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	movl	12(%esp),%edi
+diff --git a/lib/accelerated/x86/coff/e_padlock-x86_64.s b/lib/accelerated/x86/coff/e_padlock-x86_64.s
+index 7edee19f5..71c9e1aea 100644
+--- a/lib/accelerated/x86/coff/e_padlock-x86_64.s
++++ b/lib/accelerated/x86/coff/e_padlock-x86_64.s
+@@ -1,4 +1,4 @@
+-# Copyright (c) 2011-2013, Andy Polyakov <appro@openssl.org>
++# Copyright (c) 2011-2016, Andy Polyakov <appro@openssl.org>
+ # All rights reserved.
+ #
+ # Redistribution and use in source and binary forms, with or without
+@@ -42,36 +42,50 @@
+ .def	padlock_capability;	.scl 2;	.type 32;	.endef
+ .p2align	4
+ padlock_capability:
++
++.byte	243,15,30,250
+ 	movq	%rbx,%r8
+ 	xorl	%eax,%eax
+ 	cpuid
+ 	xorl	%eax,%eax
+-	cmpl	$1953391939,%ebx
++	cmpl	$0x746e6543,%ebx
++	jne	.Lzhaoxin
++	cmpl	$0x48727561,%edx
++	jne	.Lnoluck
++	cmpl	$0x736c7561,%ecx
++	jne	.Lnoluck
++	jmp	.LzhaoxinEnd
++.Lzhaoxin:
++	cmpl	$0x68532020,%ebx
+ 	jne	.Lnoluck
+-	cmpl	$1215460705,%edx
++	cmpl	$0x68676e61,%edx
+ 	jne	.Lnoluck
+-	cmpl	$1936487777,%ecx
++	cmpl	$0x20206961,%ecx
+ 	jne	.Lnoluck
+-	movl	$3221225472,%eax
++.LzhaoxinEnd:
++	movl	$0xC0000000,%eax
+ 	cpuid
+ 	movl	%eax,%edx
+ 	xorl	%eax,%eax
+-	cmpl	$3221225473,%edx
++	cmpl	$0xC0000001,%edx
+ 	jb	.Lnoluck
+-	movl	$3221225473,%eax
++	movl	$0xC0000001,%eax
+ 	cpuid
+ 	movl	%edx,%eax
+-	andl	$4294967279,%eax
+-	orl	$16,%eax
++	andl	$0xffffffef,%eax
++	orl	$0x10,%eax
+ .Lnoluck:
+ 	movq	%r8,%rbx
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	padlock_key_bswap
+ .def	padlock_key_bswap;	.scl 2;	.type 32;	.endef
+ .p2align	4
+ padlock_key_bswap:
++
++.byte	243,15,30,250
+ 	movl	240(%rcx),%edx
+ .Lbswap_loop:
+ 	movl	(%rcx),%eax
+@@ -83,10 +97,13 @@ padlock_key_bswap:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	padlock_verify_context
+ .def	padlock_verify_context;	.scl 2;	.type 32;	.endef
+ .p2align	4
+ padlock_verify_context:
++
++.byte	243,15,30,250
+ 	movq	%rcx,%rdx
+ 	pushf
+ 	leaq	.Lpadlock_saved_context(%rip),%rax
+@@ -95,9 +112,12 @@ padlock_verify_context:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .def	_padlock_verify_ctx;	.scl 3;	.type 32;	.endef
+ .p2align	4
+ _padlock_verify_ctx:
++
++.byte	243,15,30,250
+ 	movq	8(%rsp),%r8
+ 	btq	$30,%r8
+ 	jnc	.Lverified
+@@ -110,15 +130,19 @@ _padlock_verify_ctx:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	padlock_reload_key
+ .def	padlock_reload_key;	.scl 2;	.type 32;	.endef
+ .p2align	4
+ padlock_reload_key:
++
++.byte	243,15,30,250
+ 	pushf
+ 	popf
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	padlock_aes_block
+ .def	padlock_aes_block;	.scl 2;	.type 32;	.endef
+ .p2align	4
+@@ -131,15 +155,18 @@ padlock_aes_block:
+ 	movq	%rdx,%rsi
+ 	movq	%r8,%rdx
+ 
++
++.byte	243,15,30,250
+ 	movq	%rbx,%r8
+ 	movq	$1,%rcx
+ 	leaq	32(%rdx),%rbx
+ 	leaq	16(%rdx),%rdx
+-.byte	0xf3,0x0f,0xa7,0xc8	
++.byte	0xf3,0x0f,0xa7,0xc8
+ 	movq	%r8,%rbx
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_padlock_aes_block:
+ 
+ .globl	padlock_xstore
+@@ -153,11 +180,14 @@ padlock_xstore:
+ 	movq	%rcx,%rdi
+ 	movq	%rdx,%rsi
+ 
++
++.byte	243,15,30,250
+ 	movl	%esi,%edx
+-.byte	0x0f,0xa7,0xc0		
++.byte	0x0f,0xa7,0xc0
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_padlock_xstore:
+ 
+ .globl	padlock_sha1_oneshot
+@@ -172,6 +202,8 @@ padlock_sha1_oneshot:
+ 	movq	%rdx,%rsi
+ 	movq	%r8,%rdx
+ 
++
++.byte	243,15,30,250
+ 	movq	%rdx,%rcx
+ 	movq	%rdi,%rdx
+ 	movups	(%rdi),%xmm0
+@@ -181,7 +213,7 @@ padlock_sha1_oneshot:
+ 	movq	%rsp,%rdi
+ 	movl	%eax,16(%rsp)
+ 	xorq	%rax,%rax
+-.byte	0xf3,0x0f,0xa6,0xc8	
++.byte	0xf3,0x0f,0xa6,0xc8
+ 	movaps	(%rsp),%xmm0
+ 	movl	16(%rsp),%eax
+ 	addq	$128+8,%rsp
+@@ -190,6 +222,7 @@ padlock_sha1_oneshot:
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_padlock_sha1_oneshot:
+ 
+ .globl	padlock_sha1_blocks
+@@ -204,6 +237,8 @@ padlock_sha1_blocks:
+ 	movq	%rdx,%rsi
+ 	movq	%r8,%rdx
+ 
++
++.byte	243,15,30,250
+ 	movq	%rdx,%rcx
+ 	movq	%rdi,%rdx
+ 	movups	(%rdi),%xmm0
+@@ -213,7 +248,7 @@ padlock_sha1_blocks:
+ 	movq	%rsp,%rdi
+ 	movl	%eax,16(%rsp)
+ 	movq	$-1,%rax
+-.byte	0xf3,0x0f,0xa6,0xc8	
++.byte	0xf3,0x0f,0xa6,0xc8
+ 	movaps	(%rsp),%xmm0
+ 	movl	16(%rsp),%eax
+ 	addq	$128+8,%rsp
+@@ -222,6 +257,7 @@ padlock_sha1_blocks:
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_padlock_sha1_blocks:
+ 
+ .globl	padlock_sha256_oneshot
+@@ -236,6 +272,8 @@ padlock_sha256_oneshot:
+ 	movq	%rdx,%rsi
+ 	movq	%r8,%rdx
+ 
++
++.byte	243,15,30,250
+ 	movq	%rdx,%rcx
+ 	movq	%rdi,%rdx
+ 	movups	(%rdi),%xmm0
+@@ -245,7 +283,7 @@ padlock_sha256_oneshot:
+ 	movq	%rsp,%rdi
+ 	movaps	%xmm1,16(%rsp)
+ 	xorq	%rax,%rax
+-.byte	0xf3,0x0f,0xa6,0xd0	
++.byte	0xf3,0x0f,0xa6,0xd0
+ 	movaps	(%rsp),%xmm0
+ 	movaps	16(%rsp),%xmm1
+ 	addq	$128+8,%rsp
+@@ -254,6 +292,7 @@ padlock_sha256_oneshot:
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_padlock_sha256_oneshot:
+ 
+ .globl	padlock_sha256_blocks
+@@ -268,6 +307,8 @@ padlock_sha256_blocks:
+ 	movq	%rdx,%rsi
+ 	movq	%r8,%rdx
+ 
++
++.byte	243,15,30,250
+ 	movq	%rdx,%rcx
+ 	movq	%rdi,%rdx
+ 	movups	(%rdi),%xmm0
+@@ -277,7 +318,7 @@ padlock_sha256_blocks:
+ 	movq	%rsp,%rdi
+ 	movaps	%xmm1,16(%rsp)
+ 	movq	$-1,%rax
+-.byte	0xf3,0x0f,0xa6,0xd0	
++.byte	0xf3,0x0f,0xa6,0xd0
+ 	movaps	(%rsp),%xmm0
+ 	movaps	16(%rsp),%xmm1
+ 	addq	$128+8,%rsp
+@@ -286,6 +327,7 @@ padlock_sha256_blocks:
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_padlock_sha256_blocks:
+ 
+ .globl	padlock_sha512_blocks
+@@ -300,6 +342,8 @@ padlock_sha512_blocks:
+ 	movq	%rdx,%rsi
+ 	movq	%r8,%rdx
+ 
++
++.byte	243,15,30,250
+ 	movq	%rdx,%rcx
+ 	movq	%rdi,%rdx
+ 	movups	(%rdi),%xmm0
+@@ -312,7 +356,7 @@ padlock_sha512_blocks:
+ 	movaps	%xmm1,16(%rsp)
+ 	movaps	%xmm2,32(%rsp)
+ 	movaps	%xmm3,48(%rsp)
+-.byte	0xf3,0x0f,0xa6,0xe0	
++.byte	0xf3,0x0f,0xa6,0xe0
+ 	movaps	(%rsp),%xmm0
+ 	movaps	16(%rsp),%xmm1
+ 	movaps	32(%rsp),%xmm2
+@@ -325,6 +369,7 @@ padlock_sha512_blocks:
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_padlock_sha512_blocks:
+ .globl	padlock_ecb_encrypt
+ .def	padlock_ecb_encrypt;	.scl 2;	.type 32;	.endef
+@@ -339,6 +384,8 @@ padlock_ecb_encrypt:
+ 	movq	%r8,%rdx
+ 	movq	%r9,%rcx
+ 
++
++.byte	243,15,30,250
+ 	pushq	%rbp
+ 	pushq	%rbx
+ 
+@@ -356,9 +403,9 @@ padlock_ecb_encrypt:
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%rdx)
+ 	jnz	.Lecb_aligned
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	setz	%al
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+ 	jnz	.Lecb_aligned
+@@ -382,7 +429,7 @@ padlock_ecb_encrypt:
+ 	cmoveq	%rdi,%rax
+ 	addq	%rcx,%rax
+ 	negq	%rax
+-	andq	$4095,%rax
++	andq	$0xfff,%rax
+ 	cmpq	$128,%rax
+ 	movq	$-128,%rax
+ 	cmovaeq	%rbx,%rax
+@@ -398,12 +445,12 @@ padlock_ecb_encrypt:
+ 	movq	%rcx,%r10
+ 	movq	%rbx,%rcx
+ 	movq	%rbx,%r11
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	cmovnzq	%rsp,%rdi
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	jz	.Lecb_inp_aligned
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ 	movq	%rbx,%rcx
+ 	movq	%rdi,%rsi
+@@ -411,15 +458,15 @@ padlock_ecb_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,200	
++.byte	0xf3,0x0f,0xa7,200
+ 	movq	%r8,%rdi
+ 	movq	%r11,%rbx
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	jz	.Lecb_out_aligned
+ 	movq	%rbx,%rcx
+ 	leaq	(%rsp),%rsi
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ .Lecb_out_aligned:
+ 	movq	%r9,%rsi
+@@ -440,7 +487,7 @@ padlock_ecb_encrypt:
+ 	subq	%rax,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	movq	%rsp,%rsi
+ 	movq	%r8,%rdi
+ 	movq	%rbx,%rcx
+@@ -466,7 +513,7 @@ padlock_ecb_encrypt:
+ .Lecb_aligned:
+ 	leaq	(%rsi,%rcx,1),%rbp
+ 	negq	%rbp
+-	andq	$4095,%rbp
++	andq	$0xfff,%rbp
+ 	xorl	%eax,%eax
+ 	cmpq	$128,%rbp
+ 	movq	$128-1,%rbp
+@@ -477,7 +524,7 @@ padlock_ecb_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,200	
++.byte	0xf3,0x0f,0xa7,200
+ 	testq	%rbp,%rbp
+ 	jz	.Lecb_exit
+ 
+@@ -489,7 +536,7 @@ padlock_ecb_encrypt:
+ 	subq	%rcx,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	leaq	(%r8),%rdi
+ 	leaq	(%rsp),%rsi
+ 	movq	%rbx,%rcx
+@@ -503,6 +550,7 @@ padlock_ecb_encrypt:
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_padlock_ecb_encrypt:
+ .globl	padlock_cbc_encrypt
+ .def	padlock_cbc_encrypt;	.scl 2;	.type 32;	.endef
+@@ -517,6 +565,8 @@ padlock_cbc_encrypt:
+ 	movq	%r8,%rdx
+ 	movq	%r9,%rcx
+ 
++
++.byte	243,15,30,250
+ 	pushq	%rbp
+ 	pushq	%rbx
+ 
+@@ -534,9 +584,9 @@ padlock_cbc_encrypt:
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%rdx)
+ 	jnz	.Lcbc_aligned
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	setz	%al
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+ 	jnz	.Lcbc_aligned
+@@ -560,7 +610,7 @@ padlock_cbc_encrypt:
+ 	cmoveq	%rdi,%rax
+ 	addq	%rcx,%rax
+ 	negq	%rax
+-	andq	$4095,%rax
++	andq	$0xfff,%rax
+ 	cmpq	$64,%rax
+ 	movq	$-64,%rax
+ 	cmovaeq	%rbx,%rax
+@@ -576,12 +626,12 @@ padlock_cbc_encrypt:
+ 	movq	%rcx,%r10
+ 	movq	%rbx,%rcx
+ 	movq	%rbx,%r11
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	cmovnzq	%rsp,%rdi
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	jz	.Lcbc_inp_aligned
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ 	movq	%rbx,%rcx
+ 	movq	%rdi,%rsi
+@@ -589,17 +639,17 @@ padlock_cbc_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,208	
++.byte	0xf3,0x0f,0xa7,208
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ 	movq	%r8,%rdi
+ 	movq	%r11,%rbx
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	jz	.Lcbc_out_aligned
+ 	movq	%rbx,%rcx
+ 	leaq	(%rsp),%rsi
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ .Lcbc_out_aligned:
+ 	movq	%r9,%rsi
+@@ -620,7 +670,7 @@ padlock_cbc_encrypt:
+ 	subq	%rax,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	movq	%rsp,%rsi
+ 	movq	%r8,%rdi
+ 	movq	%rbx,%rcx
+@@ -646,7 +696,7 @@ padlock_cbc_encrypt:
+ .Lcbc_aligned:
+ 	leaq	(%rsi,%rcx,1),%rbp
+ 	negq	%rbp
+-	andq	$4095,%rbp
++	andq	$0xfff,%rbp
+ 	xorl	%eax,%eax
+ 	cmpq	$64,%rbp
+ 	movq	$64-1,%rbp
+@@ -657,7 +707,7 @@ padlock_cbc_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,208	
++.byte	0xf3,0x0f,0xa7,208
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ 	testq	%rbp,%rbp
+@@ -671,7 +721,7 @@ padlock_cbc_encrypt:
+ 	subq	%rcx,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	leaq	(%r8),%rdi
+ 	leaq	(%rsp),%rsi
+ 	movq	%rbx,%rcx
+@@ -685,6 +735,7 @@ padlock_cbc_encrypt:
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_padlock_cbc_encrypt:
+ .globl	padlock_cfb_encrypt
+ .def	padlock_cfb_encrypt;	.scl 2;	.type 32;	.endef
+@@ -699,6 +750,8 @@ padlock_cfb_encrypt:
+ 	movq	%r8,%rdx
+ 	movq	%r9,%rcx
+ 
++
++.byte	243,15,30,250
+ 	pushq	%rbp
+ 	pushq	%rbx
+ 
+@@ -716,9 +769,9 @@ padlock_cfb_encrypt:
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%rdx)
+ 	jnz	.Lcfb_aligned
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	setz	%al
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+ 	jnz	.Lcfb_aligned
+@@ -745,12 +798,12 @@ padlock_cfb_encrypt:
+ 	movq	%rcx,%r10
+ 	movq	%rbx,%rcx
+ 	movq	%rbx,%r11
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	cmovnzq	%rsp,%rdi
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	jz	.Lcfb_inp_aligned
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ 	movq	%rbx,%rcx
+ 	movq	%rdi,%rsi
+@@ -758,17 +811,17 @@ padlock_cfb_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,224	
++.byte	0xf3,0x0f,0xa7,224
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ 	movq	%r8,%rdi
+ 	movq	%r11,%rbx
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	jz	.Lcfb_out_aligned
+ 	movq	%rbx,%rcx
+ 	leaq	(%rsp),%rsi
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ .Lcfb_out_aligned:
+ 	movq	%r9,%rsi
+@@ -798,7 +851,7 @@ padlock_cfb_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,224	
++.byte	0xf3,0x0f,0xa7,224
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ .Lcfb_exit:
+@@ -810,6 +863,7 @@ padlock_cfb_encrypt:
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_padlock_cfb_encrypt:
+ .globl	padlock_ofb_encrypt
+ .def	padlock_ofb_encrypt;	.scl 2;	.type 32;	.endef
+@@ -824,6 +878,8 @@ padlock_ofb_encrypt:
+ 	movq	%r8,%rdx
+ 	movq	%r9,%rcx
+ 
++
++.byte	243,15,30,250
+ 	pushq	%rbp
+ 	pushq	%rbx
+ 
+@@ -841,9 +897,9 @@ padlock_ofb_encrypt:
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%rdx)
+ 	jnz	.Lofb_aligned
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	setz	%al
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+ 	jnz	.Lofb_aligned
+@@ -870,12 +926,12 @@ padlock_ofb_encrypt:
+ 	movq	%rcx,%r10
+ 	movq	%rbx,%rcx
+ 	movq	%rbx,%r11
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	cmovnzq	%rsp,%rdi
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	jz	.Lofb_inp_aligned
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ 	movq	%rbx,%rcx
+ 	movq	%rdi,%rsi
+@@ -883,17 +939,17 @@ padlock_ofb_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,232	
++.byte	0xf3,0x0f,0xa7,232
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ 	movq	%r8,%rdi
+ 	movq	%r11,%rbx
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	jz	.Lofb_out_aligned
+ 	movq	%rbx,%rcx
+ 	leaq	(%rsp),%rsi
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ .Lofb_out_aligned:
+ 	movq	%r9,%rsi
+@@ -923,7 +979,7 @@ padlock_ofb_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,232	
++.byte	0xf3,0x0f,0xa7,232
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ .Lofb_exit:
+@@ -935,6 +991,7 @@ padlock_ofb_encrypt:
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_padlock_ofb_encrypt:
+ .globl	padlock_ctr32_encrypt
+ .def	padlock_ctr32_encrypt;	.scl 2;	.type 32;	.endef
+@@ -949,6 +1006,8 @@ padlock_ctr32_encrypt:
+ 	movq	%r8,%rdx
+ 	movq	%r9,%rcx
+ 
++
++.byte	243,15,30,250
+ 	pushq	%rbp
+ 	pushq	%rbx
+ 
+@@ -966,9 +1025,9 @@ padlock_ctr32_encrypt:
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%rdx)
+ 	jnz	.Lctr32_aligned
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	setz	%al
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+ 	jnz	.Lctr32_aligned
+@@ -1003,7 +1062,7 @@ padlock_ctr32_encrypt:
+ 	cmoveq	%rdi,%rax
+ 	addq	%rcx,%rax
+ 	negq	%rax
+-	andq	$4095,%rax
++	andq	$0xfff,%rax
+ 	cmpq	$32,%rax
+ 	movq	$-32,%rax
+ 	cmovaeq	%rbx,%rax
+@@ -1019,12 +1078,12 @@ padlock_ctr32_encrypt:
+ 	movq	%rcx,%r10
+ 	movq	%rbx,%rcx
+ 	movq	%rbx,%r11
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	cmovnzq	%rsp,%rdi
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	jz	.Lctr32_inp_aligned
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ 	movq	%rbx,%rcx
+ 	movq	%rdi,%rsi
+@@ -1032,23 +1091,23 @@ padlock_ctr32_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,216	
++.byte	0xf3,0x0f,0xa7,216
+ 	movl	-4(%rdx),%eax
+-	testl	$4294901760,%eax
++	testl	$0xffff0000,%eax
+ 	jnz	.Lctr32_no_carry
+ 	bswapl	%eax
+-	addl	$65536,%eax
++	addl	$0x10000,%eax
+ 	bswapl	%eax
+ 	movl	%eax,-4(%rdx)
+ .Lctr32_no_carry:
+ 	movq	%r8,%rdi
+ 	movq	%r11,%rbx
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	jz	.Lctr32_out_aligned
+ 	movq	%rbx,%rcx
+ 	leaq	(%rsp),%rsi
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ .Lctr32_out_aligned:
+ 	movq	%r9,%rsi
+@@ -1066,7 +1125,7 @@ padlock_ctr32_encrypt:
+ 	cmoveq	%rdi,%rax
+ 	addq	%rcx,%rax
+ 	negq	%rax
+-	andq	$4095,%rax
++	andq	$0xfff,%rax
+ 	cmpq	$32,%rax
+ 	movq	$-32,%rax
+ 	cmovaeq	%rbx,%rax
+@@ -1081,7 +1140,7 @@ padlock_ctr32_encrypt:
+ 	subq	%rax,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	movq	%rsp,%rsi
+ 	movq	%r8,%rdi
+ 	movq	%rbx,%rcx
+@@ -1108,7 +1167,7 @@ padlock_ctr32_encrypt:
+ 	movl	-4(%rdx),%eax
+ 	bswapl	%eax
+ 	negl	%eax
+-	andl	$65535,%eax
++	andl	$0xffff,%eax
+ 	movq	$1048576,%rbx
+ 	shll	$4,%eax
+ 	cmovzq	%rbx,%rax
+@@ -1125,11 +1184,11 @@ padlock_ctr32_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,216	
++.byte	0xf3,0x0f,0xa7,216
+ 
+ 	movl	-4(%rdx),%eax
+ 	bswapl	%eax
+-	addl	$65536,%eax
++	addl	$0x10000,%eax
+ 	bswapl	%eax
+ 	movl	%eax,-4(%rdx)
+ 
+@@ -1143,7 +1202,7 @@ padlock_ctr32_encrypt:
+ .Lctr32_aligned_skip:
+ 	leaq	(%rsi,%rcx,1),%rbp
+ 	negq	%rbp
+-	andq	$4095,%rbp
++	andq	$0xfff,%rbp
+ 	xorl	%eax,%eax
+ 	cmpq	$32,%rbp
+ 	movq	$32-1,%rbp
+@@ -1154,7 +1213,7 @@ padlock_ctr32_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,216	
++.byte	0xf3,0x0f,0xa7,216
+ 	testq	%rbp,%rbp
+ 	jz	.Lctr32_exit
+ 
+@@ -1166,7 +1225,7 @@ padlock_ctr32_encrypt:
+ 	subq	%rcx,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	leaq	(%r8),%rdi
+ 	leaq	(%rsp),%rsi
+ 	movq	%rbx,%rcx
+@@ -1180,6 +1239,7 @@ padlock_ctr32_encrypt:
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_padlock_ctr32_encrypt:
+ .byte	86,73,65,32,80,97,100,108,111,99,107,32,120,56,54,95,54,52,32,109,111,100,117,108,101,44,32,67,82,89,80,84,79,71,65,77,83,32,98,121,32,60,97,112,112,114,111,64,111,112,101,110,115,115,108,46,111,114,103,62,0
+ .p2align	4
+diff --git a/lib/accelerated/x86/coff/ghash-x86_64.s b/lib/accelerated/x86/coff/ghash-x86_64.s
+index de207e400..cfe24252f 100644
+--- a/lib/accelerated/x86/coff/ghash-x86_64.s
++++ b/lib/accelerated/x86/coff/ghash-x86_64.s
+@@ -52,6 +52,7 @@ gcm_gmult_4bit:
+ 	movq	%rdx,%rsi
+ 
+ 
++.byte	243,15,30,250
+ 	pushq	%rbx
+ 
+ 	pushq	%rbp
+@@ -168,6 +169,7 @@ gcm_ghash_4bit:
+ 	movq	%r9,%rcx
+ 
+ 
++.byte	243,15,30,250
+ 	pushq	%rbx
+ 
+ 	pushq	%rbp
+@@ -918,6 +920,7 @@ gcm_init_clmul:
+ .p2align	4
+ gcm_gmult_clmul:
+ 
++.byte	243,15,30,250
+ .L_gmult_clmul:
+ 	movdqu	(%rcx),%xmm0
+ 	movdqa	.Lbswap_mask(%rip),%xmm5
+@@ -971,6 +974,7 @@ gcm_gmult_clmul:
+ .p2align	5
+ gcm_ghash_clmul:
+ 
++.byte	243,15,30,250
+ .L_ghash_clmul:
+ 	leaq	-136(%rsp),%rax
+ .LSEH_begin_gcm_ghash_clmul:
+@@ -1498,6 +1502,7 @@ gcm_init_avx:
+ .p2align	5
+ gcm_gmult_avx:
+ 
++.byte	243,15,30,250
+ 	jmp	.L_gmult_clmul
+ 
+ 
+@@ -1506,6 +1511,7 @@ gcm_gmult_avx:
+ .p2align	5
+ gcm_ghash_avx:
+ 
++.byte	243,15,30,250
+ 	leaq	-136(%rsp),%rax
+ .LSEH_begin_gcm_ghash_avx:
+ 
+diff --git a/lib/accelerated/x86/coff/sha1-ssse3-x86.s b/lib/accelerated/x86/coff/sha1-ssse3-x86.s
+index 30f9ded21..34b33601e 100644
+--- a/lib/accelerated/x86/coff/sha1-ssse3-x86.s
++++ b/lib/accelerated/x86/coff/sha1-ssse3-x86.s
+@@ -43,6 +43,7 @@
+ .align	16
+ _sha1_block_data_order:
+ .L_sha1_block_data_order_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+diff --git a/lib/accelerated/x86/coff/sha1-ssse3-x86_64.s b/lib/accelerated/x86/coff/sha1-ssse3-x86_64.s
+index cdfc88254..79f841f1a 100644
+--- a/lib/accelerated/x86/coff/sha1-ssse3-x86_64.s
++++ b/lib/accelerated/x86/coff/sha1-ssse3-x86_64.s
+@@ -1490,10 +1490,10 @@ _shaext_shortcut:
+ 	movaps	-8-16(%rax),%xmm9
+ 	movq	%rax,%rsp
+ .Lepilogue_shaext:
+-
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_sha1_block_data_order_shaext:
+ .def	sha1_block_data_order_ssse3;	.scl 3;	.type 32;	.endef
+ .p2align	4
+diff --git a/lib/accelerated/x86/coff/sha256-ssse3-x86.s b/lib/accelerated/x86/coff/sha256-ssse3-x86.s
+index 05cd61d1b..8109c6b51 100644
+--- a/lib/accelerated/x86/coff/sha256-ssse3-x86.s
++++ b/lib/accelerated/x86/coff/sha256-ssse3-x86.s
+@@ -43,6 +43,7 @@
+ .align	16
+ _sha256_block_data_order:
+ .L_sha256_block_data_order_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+diff --git a/lib/accelerated/x86/coff/sha256-ssse3-x86_64.s b/lib/accelerated/x86/coff/sha256-ssse3-x86_64.s
+index d2fc1957e..78fae2a62 100644
+--- a/lib/accelerated/x86/coff/sha256-ssse3-x86_64.s
++++ b/lib/accelerated/x86/coff/sha256-ssse3-x86_64.s
+@@ -1832,6 +1832,7 @@ sha256_block_data_order_shaext:
+ 	movq	%r8,%rdx
+ 
+ _shaext_shortcut:
++
+ 	leaq	-88(%rsp),%rsp
+ 	movaps	%xmm6,-8-80(%rax)
+ 	movaps	%xmm7,-8-64(%rax)
+@@ -2050,6 +2051,7 @@ _shaext_shortcut:
+ 	movq	8(%rsp),%rdi
+ 	movq	16(%rsp),%rsi
+ 	.byte	0xf3,0xc3
++
+ .LSEH_end_sha256_block_data_order_shaext:
+ .def	sha256_block_data_order_ssse3;	.scl 3;	.type 32;	.endef
+ .p2align	6
+@@ -5501,6 +5503,8 @@ sha256_block_data_order_avx2:
+ 
+ 	leaq	448(%rsp),%rsp
+ 
++
++
+ 	addl	0(%rdi),%eax
+ 	addl	4(%rdi),%ebx
+ 	addl	8(%rdi),%ecx
+@@ -5526,15 +5530,17 @@ sha256_block_data_order_avx2:
+ 	jbe	.Loop_avx2
+ 	leaq	(%rsp),%rbp
+ 
++
++
++
+ .Ldone_avx2:
+-	leaq	(%rbp),%rsp
+-	movq	88(%rsp),%rsi
++	movq	88(%rbp),%rsi
+ 
+ 	vzeroupper
+-	movaps	64+32(%rsp),%xmm6
+-	movaps	64+48(%rsp),%xmm7
+-	movaps	64+64(%rsp),%xmm8
+-	movaps	64+80(%rsp),%xmm9
++	movaps	64+32(%rbp),%xmm6
++	movaps	64+48(%rbp),%xmm7
++	movaps	64+64(%rbp),%xmm8
++	movaps	64+80(%rbp),%xmm9
+ 	movq	-48(%rsi),%r15
+ 
+ 	movq	-40(%rsi),%r14
+diff --git a/lib/accelerated/x86/coff/sha512-ssse3-x86.s b/lib/accelerated/x86/coff/sha512-ssse3-x86.s
+index 72a7f73d7..321a18541 100644
+--- a/lib/accelerated/x86/coff/sha512-ssse3-x86.s
++++ b/lib/accelerated/x86/coff/sha512-ssse3-x86.s
+@@ -43,6 +43,7 @@
+ .align	16
+ _sha512_block_data_order:
+ .L_sha512_block_data_order_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+diff --git a/lib/accelerated/x86/coff/sha512-ssse3-x86_64.s b/lib/accelerated/x86/coff/sha512-ssse3-x86_64.s
+index 419fa2a98..836e0cf66 100644
+--- a/lib/accelerated/x86/coff/sha512-ssse3-x86_64.s
++++ b/lib/accelerated/x86/coff/sha512-ssse3-x86_64.s
+@@ -5494,6 +5494,8 @@ sha512_block_data_order_avx2:
+ 
+ 	leaq	1152(%rsp),%rsp
+ 
++
++
+ 	addq	0(%rdi),%rax
+ 	addq	8(%rdi),%rbx
+ 	addq	16(%rdi),%rcx
+@@ -5519,17 +5521,19 @@ sha512_block_data_order_avx2:
+ 	jbe	.Loop_avx2
+ 	leaq	(%rsp),%rbp
+ 
++
++
++
+ .Ldone_avx2:
+-	leaq	(%rbp),%rsp
+-	movq	152(%rsp),%rsi
++	movq	152(%rbp),%rsi
+ 
+ 	vzeroupper
+-	movaps	128+32(%rsp),%xmm6
+-	movaps	128+48(%rsp),%xmm7
+-	movaps	128+64(%rsp),%xmm8
+-	movaps	128+80(%rsp),%xmm9
+-	movaps	128+96(%rsp),%xmm10
+-	movaps	128+112(%rsp),%xmm11
++	movaps	128+32(%rbp),%xmm6
++	movaps	128+48(%rbp),%xmm7
++	movaps	128+64(%rbp),%xmm8
++	movaps	128+80(%rbp),%xmm9
++	movaps	128+96(%rbp),%xmm10
++	movaps	128+112(%rbp),%xmm11
+ 	movq	-48(%rsi),%r15
+ 
+ 	movq	-40(%rsi),%r14
+diff --git a/lib/accelerated/x86/elf/aes-ssse3-x86.s b/lib/accelerated/x86/elf/aes-ssse3-x86.s
+index 265e28a7e..7be53059f 100644
+--- a/lib/accelerated/x86/elf/aes-ssse3-x86.s
++++ b/lib/accelerated/x86/elf/aes-ssse3-x86.s
+@@ -71,6 +71,7 @@
+ .type	_vpaes_preheat,@function
+ .align	16
+ _vpaes_preheat:
++.byte	243,15,30,251
+ 	addl	(%esp),%ebp
+ 	movdqa	-48(%ebp),%xmm7
+ 	movdqa	-16(%ebp),%xmm6
+@@ -79,6 +80,7 @@ _vpaes_preheat:
+ .type	_vpaes_encrypt_core,@function
+ .align	16
+ _vpaes_encrypt_core:
++.byte	243,15,30,251
+ 	movl	$16,%ecx
+ 	movl	240(%edx),%eax
+ 	movdqa	%xmm6,%xmm1
+@@ -156,6 +158,7 @@ _vpaes_encrypt_core:
+ .type	_vpaes_decrypt_core,@function
+ .align	16
+ _vpaes_decrypt_core:
++.byte	243,15,30,251
+ 	leal	608(%ebp),%ebx
+ 	movl	240(%edx),%eax
+ 	movdqa	%xmm6,%xmm1
+@@ -244,6 +247,7 @@ _vpaes_decrypt_core:
+ .type	_vpaes_schedule_core,@function
+ .align	16
+ _vpaes_schedule_core:
++.byte	243,15,30,251
+ 	addl	(%esp),%ebp
+ 	movdqu	(%esi),%xmm0
+ 	movdqa	320(%ebp),%xmm2
+@@ -338,6 +342,7 @@ _vpaes_schedule_core:
+ .type	_vpaes_schedule_192_smear,@function
+ .align	16
+ _vpaes_schedule_192_smear:
++.byte	243,15,30,251
+ 	pshufd	$128,%xmm6,%xmm1
+ 	pshufd	$254,%xmm7,%xmm0
+ 	pxor	%xmm1,%xmm6
+@@ -350,6 +355,7 @@ _vpaes_schedule_192_smear:
+ .type	_vpaes_schedule_round,@function
+ .align	16
+ _vpaes_schedule_round:
++.byte	243,15,30,251
+ 	movdqa	8(%esp),%xmm2
+ 	pxor	%xmm1,%xmm1
+ .byte	102,15,58,15,202,15
+@@ -399,6 +405,7 @@ _vpaes_schedule_round:
+ .type	_vpaes_schedule_transform,@function
+ .align	16
+ _vpaes_schedule_transform:
++.byte	243,15,30,251
+ 	movdqa	-16(%ebp),%xmm2
+ 	movdqa	%xmm2,%xmm1
+ 	pandn	%xmm0,%xmm1
+@@ -414,6 +421,7 @@ _vpaes_schedule_transform:
+ .type	_vpaes_schedule_mangle,@function
+ .align	16
+ _vpaes_schedule_mangle:
++.byte	243,15,30,251
+ 	movdqa	%xmm0,%xmm4
+ 	movdqa	128(%ebp),%xmm5
+ 	testl	%edi,%edi
+@@ -475,6 +483,7 @@ _vpaes_schedule_mangle:
+ .align	16
+ vpaes_set_encrypt_key:
+ .L_vpaes_set_encrypt_key_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -508,6 +517,7 @@ vpaes_set_encrypt_key:
+ .align	16
+ vpaes_set_decrypt_key:
+ .L_vpaes_set_decrypt_key_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -546,6 +556,7 @@ vpaes_set_decrypt_key:
+ .align	16
+ vpaes_encrypt:
+ .L_vpaes_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -575,6 +586,7 @@ vpaes_encrypt:
+ .align	16
+ vpaes_decrypt:
+ .L_vpaes_decrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -604,6 +616,7 @@ vpaes_decrypt:
+ .align	16
+ vpaes_cbc_encrypt:
+ .L_vpaes_cbc_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -671,4 +684,21 @@ vpaes_cbc_encrypt:
+ 	ret
+ .size	vpaes_cbc_encrypt,.-.L_vpaes_cbc_encrypt_begin
+ 
++	.section ".note.gnu.property", "a"
++	.p2align 2
++	.long 1f - 0f
++	.long 4f - 1f
++	.long 5
++0:
++	.asciz "GNU"
++1:
++	.p2align 2
++	.long 0xc0000002
++	.long 3f - 2f
++2:
++	.long 3
++3:
++	.p2align 2
++4:
++
+ .section .note.GNU-stack,"",%progbits
+diff --git a/lib/accelerated/x86/elf/aes-ssse3-x86_64.s b/lib/accelerated/x86/elf/aes-ssse3-x86_64.s
+index ea1216baf..5a3f336f2 100644
+--- a/lib/accelerated/x86/elf/aes-ssse3-x86_64.s
++++ b/lib/accelerated/x86/elf/aes-ssse3-x86_64.s
+@@ -635,6 +635,7 @@ _vpaes_schedule_mangle:
+ .align	16
+ vpaes_set_encrypt_key:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	movl	%esi,%eax
+ 	shrl	$5,%eax
+ 	addl	$5,%eax
+@@ -653,6 +654,7 @@ vpaes_set_encrypt_key:
+ .align	16
+ vpaes_set_decrypt_key:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	movl	%esi,%eax
+ 	shrl	$5,%eax
+ 	addl	$5,%eax
+@@ -676,6 +678,7 @@ vpaes_set_decrypt_key:
+ .align	16
+ vpaes_encrypt:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	movdqu	(%rdi),%xmm0
+ 	call	_vpaes_preheat
+ 	call	_vpaes_encrypt_core
+@@ -689,6 +692,7 @@ vpaes_encrypt:
+ .align	16
+ vpaes_decrypt:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	movdqu	(%rdi),%xmm0
+ 	call	_vpaes_preheat
+ 	call	_vpaes_decrypt_core
+@@ -701,6 +705,7 @@ vpaes_decrypt:
+ .align	16
+ vpaes_cbc_encrypt:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	xchgq	%rcx,%rdx
+ 	subq	$16,%rcx
+ 	jc	.Lcbc_abort
+@@ -863,5 +868,26 @@ _vpaes_consts:
+ .byte	86,101,99,116,111,114,32,80,101,114,109,117,116,97,116,105,111,110,32,65,69,83,32,102,111,114,32,120,56,54,95,54,52,47,83,83,83,69,51,44,32,77,105,107,101,32,72,97,109,98,117,114,103,32,40,83,116,97,110,102,111,114,100,32,85,110,105,118,101,114,115,105,116,121,41,0
+ .align	64
+ .size	_vpaes_consts,.-_vpaes_consts
++	.section ".note.gnu.property", "a"
++	.p2align 3
++	.long 1f - 0f
++	.long 4f - 1f
++	.long 5
++0:
++	# "GNU" encoded with .byte, since .asciz isn't supported
++	# on Solaris.
++	.byte 0x47
++	.byte 0x4e
++	.byte 0x55
++	.byte 0
++1:
++	.p2align 3
++	.long 0xc0000002
++	.long 3f - 2f
++2:
++	.long 3
++3:
++	.p2align 3
++4:
+ 
+ .section .note.GNU-stack,"",%progbits
+diff --git a/lib/accelerated/x86/elf/aesni-gcm-x86_64.s b/lib/accelerated/x86/elf/aesni-gcm-x86_64.s
+index e26d18d69..1a11222e7 100644
+--- a/lib/accelerated/x86/elf/aesni-gcm-x86_64.s
++++ b/lib/accelerated/x86/elf/aesni-gcm-x86_64.s
+@@ -42,6 +42,8 @@
+ .type	_aesni_ctr32_ghash_6x,@function
+ .align	32
+ _aesni_ctr32_ghash_6x:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	vmovdqu	32(%r11),%xmm2
+ 	subq	$6,%rdx
+ 	vpxor	%xmm4,%xmm4,%xmm4
+@@ -349,12 +351,14 @@ _aesni_ctr32_ghash_6x:
+ 	vpxor	%xmm4,%xmm8,%xmm8
+ 
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	_aesni_ctr32_ghash_6x,.-_aesni_ctr32_ghash_6x
+ .globl	aesni_gcm_decrypt
+ .type	aesni_gcm_decrypt,@function
+ .align	32
+ aesni_gcm_decrypt:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	xorq	%r10,%r10
+ 	cmpq	$0x60,%rdx
+ 	jb	.Lgcm_dec_abort
+@@ -455,6 +459,8 @@ aesni_gcm_decrypt:
+ .type	_aesni_ctr32_6x,@function
+ .align	32
+ _aesni_ctr32_6x:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	vmovdqu	0-128(%rcx),%xmm4
+ 	vmovdqu	32(%r11),%xmm2
+ 	leaq	-1(%rbp),%r13
+@@ -541,6 +547,7 @@ _aesni_ctr32_6x:
+ 	vpshufb	%xmm0,%xmm1,%xmm1
+ 	vpxor	%xmm4,%xmm14,%xmm14
+ 	jmp	.Loop_ctr32
++.cfi_endproc	
+ .size	_aesni_ctr32_6x,.-_aesni_ctr32_6x
+ 
+ .globl	aesni_gcm_encrypt
+@@ -548,6 +555,7 @@ _aesni_ctr32_6x:
+ .align	32
+ aesni_gcm_encrypt:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	xorq	%r10,%r10
+ 	cmpq	$288,%rdx
+ 	jb	.Lgcm_enc_abort
+@@ -822,5 +830,26 @@ aesni_gcm_encrypt:
+ .byte	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+ .byte	65,69,83,45,78,73,32,71,67,77,32,109,111,100,117,108,101,32,102,111,114,32,120,56,54,95,54,52,44,32,67,82,89,80,84,79,71,65,77,83,32,98,121,32,60,97,112,112,114,111,64,111,112,101,110,115,115,108,46,111,114,103,62,0
+ .align	64
++	.section ".note.gnu.property", "a"
++	.p2align 3
++	.long 1f - 0f
++	.long 4f - 1f
++	.long 5
++0:
++	# "GNU" encoded with .byte, since .asciz isn't supported
++	# on Solaris.
++	.byte 0x47
++	.byte 0x4e
++	.byte 0x55
++	.byte 0
++1:
++	.p2align 3
++	.long 0xc0000002
++	.long 3f - 2f
++2:
++	.long 3
++3:
++	.p2align 3
++4:
+ 
+ .section .note.GNU-stack,"",%progbits
+diff --git a/lib/accelerated/x86/elf/aesni-x86.s b/lib/accelerated/x86/elf/aesni-x86.s
+index 6e4860209..f41d5f9ef 100644
+--- a/lib/accelerated/x86/elf/aesni-x86.s
++++ b/lib/accelerated/x86/elf/aesni-x86.s
+@@ -43,6 +43,7 @@
+ .align	16
+ aesni_encrypt:
+ .L_aesni_encrypt_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%eax
+ 	movl	12(%esp),%edx
+ 	movups	(%eax),%xmm2
+@@ -70,6 +71,7 @@ aesni_encrypt:
+ .align	16
+ aesni_decrypt:
+ .L_aesni_decrypt_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%eax
+ 	movl	12(%esp),%edx
+ 	movups	(%eax),%xmm2
+@@ -95,6 +97,7 @@ aesni_decrypt:
+ .type	_aesni_encrypt2,@function
+ .align	16
+ _aesni_encrypt2:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -122,6 +125,7 @@ _aesni_encrypt2:
+ .type	_aesni_decrypt2,@function
+ .align	16
+ _aesni_decrypt2:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -149,6 +153,7 @@ _aesni_decrypt2:
+ .type	_aesni_encrypt3,@function
+ .align	16
+ _aesni_encrypt3:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -181,6 +186,7 @@ _aesni_encrypt3:
+ .type	_aesni_decrypt3,@function
+ .align	16
+ _aesni_decrypt3:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -213,6 +219,7 @@ _aesni_decrypt3:
+ .type	_aesni_encrypt4,@function
+ .align	16
+ _aesni_encrypt4:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	movups	16(%edx),%xmm1
+ 	shll	$4,%ecx
+@@ -251,6 +258,7 @@ _aesni_encrypt4:
+ .type	_aesni_decrypt4,@function
+ .align	16
+ _aesni_decrypt4:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	movups	16(%edx),%xmm1
+ 	shll	$4,%ecx
+@@ -289,6 +297,7 @@ _aesni_decrypt4:
+ .type	_aesni_encrypt6,@function
+ .align	16
+ _aesni_encrypt6:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -343,6 +352,7 @@ _aesni_encrypt6:
+ .type	_aesni_decrypt6,@function
+ .align	16
+ _aesni_decrypt6:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -399,6 +409,7 @@ _aesni_decrypt6:
+ .align	16
+ aesni_ecb_encrypt:
+ .L_aesni_ecb_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -634,6 +645,7 @@ aesni_ecb_encrypt:
+ .align	16
+ aesni_ccm64_encrypt_blocks:
+ .L_aesni_ccm64_encrypt_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -722,6 +734,7 @@ aesni_ccm64_encrypt_blocks:
+ .align	16
+ aesni_ccm64_decrypt_blocks:
+ .L_aesni_ccm64_decrypt_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -845,6 +858,7 @@ aesni_ccm64_decrypt_blocks:
+ .align	16
+ aesni_ctr32_encrypt_blocks:
+ .L_aesni_ctr32_encrypt_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -1083,6 +1097,7 @@ aesni_ctr32_encrypt_blocks:
+ .align	16
+ aesni_xts_encrypt:
+ .L_aesni_xts_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -1443,6 +1458,7 @@ aesni_xts_encrypt:
+ .align	16
+ aesni_xts_decrypt:
+ .L_aesni_xts_decrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -1833,6 +1849,7 @@ aesni_xts_decrypt:
+ .align	16
+ aesni_ocb_encrypt:
+ .L_aesni_ocb_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -2228,6 +2245,7 @@ aesni_ocb_encrypt:
+ .align	16
+ aesni_ocb_decrypt:
+ .L_aesni_ocb_decrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -2623,6 +2641,7 @@ aesni_ocb_decrypt:
+ .align	16
+ aesni_cbc_encrypt:
+ .L_aesni_cbc_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -2882,6 +2901,7 @@ aesni_cbc_encrypt:
+ .type	_aesni_set_encrypt_key,@function
+ .align	16
+ _aesni_set_encrypt_key:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	testl	%eax,%eax
+@@ -3217,6 +3237,7 @@ _aesni_set_encrypt_key:
+ .align	16
+ aesni_set_encrypt_key:
+ .L_aesni_set_encrypt_key_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%eax
+ 	movl	8(%esp),%ecx
+ 	movl	12(%esp),%edx
+@@ -3228,6 +3249,7 @@ aesni_set_encrypt_key:
+ .align	16
+ aesni_set_decrypt_key:
+ .L_aesni_set_decrypt_key_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%eax
+ 	movl	8(%esp),%ecx
+ 	movl	12(%esp),%edx
+@@ -3275,4 +3297,21 @@ aesni_set_decrypt_key:
+ .byte	115,108,46,111,114,103,62,0
+ .comm	_gnutls_x86_cpuid_s,16,4
+ 
++	.section ".note.gnu.property", "a"
++	.p2align 2
++	.long 1f - 0f
++	.long 4f - 1f
++	.long 5
++0:
++	.asciz "GNU"
++1:
++	.p2align 2
++	.long 0xc0000002
++	.long 3f - 2f
++2:
++	.long 3
++3:
++	.p2align 2
++4:
++
+ .section .note.GNU-stack,"",%progbits
+diff --git a/lib/accelerated/x86/elf/aesni-x86_64.s b/lib/accelerated/x86/elf/aesni-x86_64.s
+index 43cf4e68d..e3f9d5a99 100644
+--- a/lib/accelerated/x86/elf/aesni-x86_64.s
++++ b/lib/accelerated/x86/elf/aesni-x86_64.s
+@@ -44,6 +44,7 @@
+ .align	16
+ aesni_encrypt:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	movups	(%rdi),%xmm2
+ 	movl	240(%rdx),%eax
+ 	movups	(%rdx),%xmm0
+@@ -70,6 +71,7 @@ aesni_encrypt:
+ .align	16
+ aesni_decrypt:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	movups	(%rdi),%xmm2
+ 	movl	240(%rdx),%eax
+ 	movups	(%rdx),%xmm0
+@@ -557,6 +559,7 @@ _aesni_decrypt8:
+ .align	16
+ aesni_ecb_encrypt:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	andq	$-16,%rdx
+ 	jz	.Lecb_ret
+ 
+@@ -900,6 +903,8 @@ aesni_ecb_encrypt:
+ .type	aesni_ccm64_encrypt_blocks,@function
+ .align	16
+ aesni_ccm64_encrypt_blocks:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	movl	240(%rcx),%eax
+ 	movdqu	(%r8),%xmm6
+ 	movdqa	.Lincrement64(%rip),%xmm9
+@@ -958,11 +963,14 @@ aesni_ccm64_encrypt_blocks:
+ 	pxor	%xmm8,%xmm8
+ 	pxor	%xmm6,%xmm6
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	aesni_ccm64_encrypt_blocks,.-aesni_ccm64_encrypt_blocks
+ .globl	aesni_ccm64_decrypt_blocks
+ .type	aesni_ccm64_decrypt_blocks,@function
+ .align	16
+ aesni_ccm64_decrypt_blocks:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	movl	240(%rcx),%eax
+ 	movups	(%r8),%xmm6
+ 	movdqu	(%r9),%xmm3
+@@ -1055,12 +1063,14 @@ aesni_ccm64_decrypt_blocks:
+ 	pxor	%xmm8,%xmm8
+ 	pxor	%xmm6,%xmm6
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	aesni_ccm64_decrypt_blocks,.-aesni_ccm64_decrypt_blocks
+ .globl	aesni_ctr32_encrypt_blocks
+ .type	aesni_ctr32_encrypt_blocks,@function
+ .align	16
+ aesni_ctr32_encrypt_blocks:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	cmpq	$1,%rdx
+ 	jne	.Lctr32_bulk
+ 
+@@ -1639,6 +1649,7 @@ aesni_ctr32_encrypt_blocks:
+ .align	16
+ aesni_xts_encrypt:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	leaq	(%rsp),%r11
+ .cfi_def_cfa_register	%r11
+ 	pushq	%rbp
+@@ -2109,6 +2120,7 @@ aesni_xts_encrypt:
+ .align	16
+ aesni_xts_decrypt:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	leaq	(%rsp),%r11
+ .cfi_def_cfa_register	%r11
+ 	pushq	%rbp
+@@ -2616,6 +2628,7 @@ aesni_xts_decrypt:
+ .align	32
+ aesni_ocb_encrypt:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	leaq	(%rsp),%rax
+ 	pushq	%rbx
+ .cfi_adjust_cfa_offset	8
+@@ -2829,6 +2842,7 @@ aesni_ocb_encrypt:
+ .type	__ocb_encrypt6,@function
+ .align	32
+ __ocb_encrypt6:
++.cfi_startproc	
+ 	pxor	%xmm9,%xmm15
+ 	movdqu	(%rbx,%r12,1),%xmm11
+ 	movdqa	%xmm10,%xmm12
+@@ -2926,11 +2940,13 @@ __ocb_encrypt6:
+ .byte	102,65,15,56,221,246
+ .byte	102,65,15,56,221,255
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	__ocb_encrypt6,.-__ocb_encrypt6
+ 
+ .type	__ocb_encrypt4,@function
+ .align	32
+ __ocb_encrypt4:
++.cfi_startproc	
+ 	pxor	%xmm9,%xmm15
+ 	movdqu	(%rbx,%r12,1),%xmm11
+ 	movdqa	%xmm10,%xmm12
+@@ -2995,11 +3011,13 @@ __ocb_encrypt4:
+ .byte	102,65,15,56,221,228
+ .byte	102,65,15,56,221,237
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	__ocb_encrypt4,.-__ocb_encrypt4
+ 
+ .type	__ocb_encrypt1,@function
+ .align	32
+ __ocb_encrypt1:
++.cfi_startproc	
+ 	pxor	%xmm15,%xmm7
+ 	pxor	%xmm9,%xmm7
+ 	pxor	%xmm2,%xmm8
+@@ -3030,6 +3048,7 @@ __ocb_encrypt1:
+ 
+ .byte	102,15,56,221,215
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	__ocb_encrypt1,.-__ocb_encrypt1
+ 
+ .globl	aesni_ocb_decrypt
+@@ -3037,6 +3056,7 @@ __ocb_encrypt1:
+ .align	32
+ aesni_ocb_decrypt:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	leaq	(%rsp),%rax
+ 	pushq	%rbx
+ .cfi_adjust_cfa_offset	8
+@@ -3272,6 +3292,7 @@ aesni_ocb_decrypt:
+ .type	__ocb_decrypt6,@function
+ .align	32
+ __ocb_decrypt6:
++.cfi_startproc	
+ 	pxor	%xmm9,%xmm15
+ 	movdqu	(%rbx,%r12,1),%xmm11
+ 	movdqa	%xmm10,%xmm12
+@@ -3363,11 +3384,13 @@ __ocb_decrypt6:
+ .byte	102,65,15,56,223,246
+ .byte	102,65,15,56,223,255
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	__ocb_decrypt6,.-__ocb_decrypt6
+ 
+ .type	__ocb_decrypt4,@function
+ .align	32
+ __ocb_decrypt4:
++.cfi_startproc	
+ 	pxor	%xmm9,%xmm15
+ 	movdqu	(%rbx,%r12,1),%xmm11
+ 	movdqa	%xmm10,%xmm12
+@@ -3428,11 +3451,13 @@ __ocb_decrypt4:
+ .byte	102,65,15,56,223,228
+ .byte	102,65,15,56,223,237
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	__ocb_decrypt4,.-__ocb_decrypt4
+ 
+ .type	__ocb_decrypt1,@function
+ .align	32
+ __ocb_decrypt1:
++.cfi_startproc	
+ 	pxor	%xmm15,%xmm7
+ 	pxor	%xmm9,%xmm7
+ 	pxor	%xmm7,%xmm2
+@@ -3462,12 +3487,14 @@ __ocb_decrypt1:
+ 
+ .byte	102,15,56,223,215
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	__ocb_decrypt1,.-__ocb_decrypt1
+ .globl	aesni_cbc_encrypt
+ .type	aesni_cbc_encrypt,@function
+ .align	16
+ aesni_cbc_encrypt:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	testq	%rdx,%rdx
+ 	jz	.Lcbc_ret
+ 
+@@ -4400,7 +4427,6 @@ __aesni_set_encrypt_key:
+ 	addq	$8,%rsp
+ .cfi_adjust_cfa_offset	-8
+ 	.byte	0xf3,0xc3
+-.cfi_endproc	
+ .LSEH_end_set_encrypt_key:
+ 
+ .align	16
+@@ -4471,6 +4497,7 @@ __aesni_set_encrypt_key:
+ 	shufps	$170,%xmm1,%xmm1
+ 	xorps	%xmm1,%xmm2
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	aesni_set_encrypt_key,.-aesni_set_encrypt_key
+ .size	__aesni_set_encrypt_key,.-__aesni_set_encrypt_key
+ .align	64
+@@ -4495,5 +4522,26 @@ __aesni_set_encrypt_key:
+ 
+ .byte	65,69,83,32,102,111,114,32,73,110,116,101,108,32,65,69,83,45,78,73,44,32,67,82,89,80,84,79,71,65,77,83,32,98,121,32,60,97,112,112,114,111,64,111,112,101,110,115,115,108,46,111,114,103,62,0
+ .align	64
++	.section ".note.gnu.property", "a"
++	.p2align 3
++	.long 1f - 0f
++	.long 4f - 1f
++	.long 5
++0:
++	# "GNU" encoded with .byte, since .asciz isn't supported
++	# on Solaris.
++	.byte 0x47
++	.byte 0x4e
++	.byte 0x55
++	.byte 0
++1:
++	.p2align 3
++	.long 0xc0000002
++	.long 3f - 2f
++2:
++	.long 3
++3:
++	.p2align 3
++4:
+ 
+ .section .note.GNU-stack,"",%progbits
+diff --git a/lib/accelerated/x86/elf/e_padlock-x86.s b/lib/accelerated/x86/elf/e_padlock-x86.s
+index ed8681ee4..dd56518f6 100644
+--- a/lib/accelerated/x86/elf/e_padlock-x86.s
++++ b/lib/accelerated/x86/elf/e_padlock-x86.s
+@@ -1,4 +1,4 @@
+-# Copyright (c) 2011-2013, Andy Polyakov <appro@openssl.org>
++# Copyright (c) 2011-2016, Andy Polyakov <appro@openssl.org>
+ # All rights reserved.
+ #
+ # Redistribution and use in source and binary forms, with or without
+@@ -37,13 +37,13 @@
+ #
+ # *** This file is auto-generated ***
+ #
+-.file	"devel/perlasm/e_padlock-x86.s"
+ .text
+ .globl	padlock_capability
+ .type	padlock_capability,@function
+ .align	16
+ padlock_capability:
+ .L_padlock_capability_begin:
++.byte	243,15,30,251
+ 	pushl	%ebx
+ 	pushfl
+ 	popl	%eax
+@@ -60,11 +60,20 @@ padlock_capability:
+ 	.byte	0x0f,0xa2
+ 	xorl	%eax,%eax
+ 	cmpl	$0x746e6543,%ebx
+-	jne	.L000noluck
++	jne	.L001zhaoxin
+ 	cmpl	$0x48727561,%edx
+ 	jne	.L000noluck
+ 	cmpl	$0x736c7561,%ecx
+ 	jne	.L000noluck
++	jmp	.L002zhaoxinEnd
++.L001zhaoxin:
++	cmpl	$0x68532020,%ebx
++	jne	.L000noluck
++	cmpl	$0x68676e61,%edx
++	jne	.L000noluck
++	cmpl	$0x20206961,%ecx
++	jne	.L000noluck
++.L002zhaoxinEnd:
+ 	movl	$3221225472,%eax
+ 	.byte	0x0f,0xa2
+ 	movl	%eax,%edx
+@@ -95,15 +104,16 @@ padlock_capability:
+ .align	16
+ padlock_key_bswap:
+ .L_padlock_key_bswap_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%edx
+ 	movl	240(%edx),%ecx
+-.L001bswap_loop:
++.L003bswap_loop:
+ 	movl	(%edx),%eax
+ 	bswap	%eax
+ 	movl	%eax,(%edx)
+ 	leal	4(%edx),%edx
+ 	subl	$1,%ecx
+-	jnz	.L001bswap_loop
++	jnz	.L003bswap_loop
+ 	ret
+ .size	padlock_key_bswap,.-.L_padlock_key_bswap_begin
+ .globl	padlock_verify_context
+@@ -111,25 +121,27 @@ padlock_key_bswap:
+ .align	16
+ padlock_verify_context:
+ .L_padlock_verify_context_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%edx
+-	leal	.Lpadlock_saved_context-.L002verify_pic_point,%eax
++	leal	.Lpadlock_saved_context-.L004verify_pic_point,%eax
+ 	pushfl
+ 	call	_padlock_verify_ctx
+-.L002verify_pic_point:
++.L004verify_pic_point:
+ 	leal	4(%esp),%esp
+ 	ret
+ .size	padlock_verify_context,.-.L_padlock_verify_context_begin
+ .type	_padlock_verify_ctx,@function
+ .align	16
+ _padlock_verify_ctx:
++.byte	243,15,30,251
+ 	addl	(%esp),%eax
+ 	btl	$30,4(%esp)
+-	jnc	.L003verified
++	jnc	.L005verified
+ 	cmpl	(%eax),%edx
+-	je	.L003verified
++	je	.L005verified
+ 	pushfl
+ 	popfl
+-.L003verified:
++.L005verified:
+ 	movl	%edx,(%eax)
+ 	ret
+ .size	_padlock_verify_ctx,.-_padlock_verify_ctx
+@@ -138,6 +150,7 @@ _padlock_verify_ctx:
+ .align	16
+ padlock_reload_key:
+ .L_padlock_reload_key_begin:
++.byte	243,15,30,251
+ 	pushfl
+ 	popfl
+ 	ret
+@@ -147,6 +160,7 @@ padlock_reload_key:
+ .align	16
+ padlock_aes_block:
+ .L_padlock_aes_block_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	pushl	%ebx
+@@ -167,6 +181,7 @@ padlock_aes_block:
+ .align	16
+ padlock_ecb_encrypt:
+ .L_padlock_ecb_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -176,25 +191,25 @@ padlock_ecb_encrypt:
+ 	movl	28(%esp),%edx
+ 	movl	32(%esp),%ecx
+ 	testl	$15,%edx
+-	jnz	.L004ecb_abort
++	jnz	.L006ecb_abort
+ 	testl	$15,%ecx
+-	jnz	.L004ecb_abort
+-	leal	.Lpadlock_saved_context-.L005ecb_pic_point,%eax
++	jnz	.L006ecb_abort
++	leal	.Lpadlock_saved_context-.L007ecb_pic_point,%eax
+ 	pushfl
+ 	cld
+ 	call	_padlock_verify_ctx
+-.L005ecb_pic_point:
++.L007ecb_pic_point:
+ 	leal	16(%edx),%edx
+ 	xorl	%eax,%eax
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%edx)
+-	jnz	.L006ecb_aligned
++	jnz	.L008ecb_aligned
+ 	testl	$15,%edi
+ 	setz	%al
+ 	testl	$15,%esi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+-	jnz	.L006ecb_aligned
++	jnz	.L008ecb_aligned
+ 	negl	%eax
+ 	movl	$512,%ebx
+ 	notl	%eax
+@@ -213,7 +228,7 @@ padlock_ecb_encrypt:
+ 	andl	$-16,%esp
+ 	movl	%eax,16(%ebp)
+ 	cmpl	%ebx,%ecx
+-	ja	.L007ecb_loop
++	ja	.L009ecb_loop
+ 	movl	%esi,%eax
+ 	cmpl	%esp,%ebp
+ 	cmovel	%edi,%eax
+@@ -224,10 +239,10 @@ padlock_ecb_encrypt:
+ 	movl	$-128,%eax
+ 	cmovael	%ebx,%eax
+ 	andl	%eax,%ebx
+-	jz	.L008ecb_unaligned_tail
+-	jmp	.L007ecb_loop
++	jz	.L010ecb_unaligned_tail
++	jmp	.L009ecb_loop
+ .align	16
+-.L007ecb_loop:
++.L009ecb_loop:
+ 	movl	%edi,(%ebp)
+ 	movl	%esi,4(%ebp)
+ 	movl	%ecx,8(%ebp)
+@@ -236,13 +251,13 @@ padlock_ecb_encrypt:
+ 	testl	$15,%edi
+ 	cmovnzl	%esp,%edi
+ 	testl	$15,%esi
+-	jz	.L009ecb_inp_aligned
++	jz	.L011ecb_inp_aligned
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+ 	movl	%ebx,%ecx
+ 	movl	%edi,%esi
+-.L009ecb_inp_aligned:
++.L011ecb_inp_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+@@ -250,23 +265,23 @@ padlock_ecb_encrypt:
+ 	movl	(%ebp),%edi
+ 	movl	12(%ebp),%ebx
+ 	testl	$15,%edi
+-	jz	.L010ecb_out_aligned
++	jz	.L012ecb_out_aligned
+ 	movl	%ebx,%ecx
+ 	leal	(%esp),%esi
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+-.L010ecb_out_aligned:
++.L012ecb_out_aligned:
+ 	movl	4(%ebp),%esi
+ 	movl	8(%ebp),%ecx
+ 	addl	%ebx,%edi
+ 	addl	%ebx,%esi
+ 	subl	%ebx,%ecx
+ 	movl	$512,%ebx
+-	jz	.L011ecb_break
++	jz	.L013ecb_break
+ 	cmpl	%ebx,%ecx
+-	jae	.L007ecb_loop
+-.L008ecb_unaligned_tail:
++	jae	.L009ecb_loop
++.L010ecb_unaligned_tail:
+ 	xorl	%eax,%eax
+ 	cmpl	%ebp,%esp
+ 	cmovel	%ecx,%eax
+@@ -279,24 +294,24 @@ padlock_ecb_encrypt:
+ 	movl	%esp,%esi
+ 	movl	%eax,%edi
+ 	movl	%ebx,%ecx
+-	jmp	.L007ecb_loop
++	jmp	.L009ecb_loop
+ .align	16
+-.L011ecb_break:
++.L013ecb_break:
+ 	cmpl	%ebp,%esp
+-	je	.L012ecb_done
++	je	.L014ecb_done
+ 	pxor	%xmm0,%xmm0
+ 	leal	(%esp),%eax
+-.L013ecb_bzero:
++.L015ecb_bzero:
+ 	movaps	%xmm0,(%eax)
+ 	leal	16(%eax),%eax
+ 	cmpl	%eax,%ebp
+-	ja	.L013ecb_bzero
+-.L012ecb_done:
++	ja	.L015ecb_bzero
++.L014ecb_done:
+ 	movl	16(%ebp),%ebp
+ 	leal	24(%ebp),%esp
+-	jmp	.L014ecb_exit
++	jmp	.L016ecb_exit
+ .align	16
+-.L006ecb_aligned:
++.L008ecb_aligned:
+ 	leal	(%esi,%ecx,1),%ebp
+ 	negl	%ebp
+ 	andl	$4095,%ebp
+@@ -306,14 +321,14 @@ padlock_ecb_encrypt:
+ 	cmovael	%eax,%ebp
+ 	andl	%ecx,%ebp
+ 	subl	%ebp,%ecx
+-	jz	.L015ecb_aligned_tail
++	jz	.L017ecb_aligned_tail
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+ .byte	243,15,167,200
+ 	testl	%ebp,%ebp
+-	jz	.L014ecb_exit
+-.L015ecb_aligned_tail:
++	jz	.L016ecb_exit
++.L017ecb_aligned_tail:
+ 	movl	%ebp,%ecx
+ 	leal	-24(%esp),%ebp
+ 	movl	%ebp,%esp
+@@ -330,11 +345,11 @@ padlock_ecb_encrypt:
+ 	movl	%esp,%esi
+ 	movl	%eax,%edi
+ 	movl	%ebx,%ecx
+-	jmp	.L007ecb_loop
+-.L014ecb_exit:
++	jmp	.L009ecb_loop
++.L016ecb_exit:
+ 	movl	$1,%eax
+ 	leal	4(%esp),%esp
+-.L004ecb_abort:
++.L006ecb_abort:
+ 	popl	%edi
+ 	popl	%esi
+ 	popl	%ebx
+@@ -346,6 +361,7 @@ padlock_ecb_encrypt:
+ .align	16
+ padlock_cbc_encrypt:
+ .L_padlock_cbc_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -355,25 +371,25 @@ padlock_cbc_encrypt:
+ 	movl	28(%esp),%edx
+ 	movl	32(%esp),%ecx
+ 	testl	$15,%edx
+-	jnz	.L016cbc_abort
++	jnz	.L018cbc_abort
+ 	testl	$15,%ecx
+-	jnz	.L016cbc_abort
+-	leal	.Lpadlock_saved_context-.L017cbc_pic_point,%eax
++	jnz	.L018cbc_abort
++	leal	.Lpadlock_saved_context-.L019cbc_pic_point,%eax
+ 	pushfl
+ 	cld
+ 	call	_padlock_verify_ctx
+-.L017cbc_pic_point:
++.L019cbc_pic_point:
+ 	leal	16(%edx),%edx
+ 	xorl	%eax,%eax
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%edx)
+-	jnz	.L018cbc_aligned
++	jnz	.L020cbc_aligned
+ 	testl	$15,%edi
+ 	setz	%al
+ 	testl	$15,%esi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+-	jnz	.L018cbc_aligned
++	jnz	.L020cbc_aligned
+ 	negl	%eax
+ 	movl	$512,%ebx
+ 	notl	%eax
+@@ -392,7 +408,7 @@ padlock_cbc_encrypt:
+ 	andl	$-16,%esp
+ 	movl	%eax,16(%ebp)
+ 	cmpl	%ebx,%ecx
+-	ja	.L019cbc_loop
++	ja	.L021cbc_loop
+ 	movl	%esi,%eax
+ 	cmpl	%esp,%ebp
+ 	cmovel	%edi,%eax
+@@ -403,10 +419,10 @@ padlock_cbc_encrypt:
+ 	movl	$-64,%eax
+ 	cmovael	%ebx,%eax
+ 	andl	%eax,%ebx
+-	jz	.L020cbc_unaligned_tail
+-	jmp	.L019cbc_loop
++	jz	.L022cbc_unaligned_tail
++	jmp	.L021cbc_loop
+ .align	16
+-.L019cbc_loop:
++.L021cbc_loop:
+ 	movl	%edi,(%ebp)
+ 	movl	%esi,4(%ebp)
+ 	movl	%ecx,8(%ebp)
+@@ -415,13 +431,13 @@ padlock_cbc_encrypt:
+ 	testl	$15,%edi
+ 	cmovnzl	%esp,%edi
+ 	testl	$15,%esi
+-	jz	.L021cbc_inp_aligned
++	jz	.L023cbc_inp_aligned
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+ 	movl	%ebx,%ecx
+ 	movl	%edi,%esi
+-.L021cbc_inp_aligned:
++.L023cbc_inp_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+@@ -431,23 +447,23 @@ padlock_cbc_encrypt:
+ 	movl	(%ebp),%edi
+ 	movl	12(%ebp),%ebx
+ 	testl	$15,%edi
+-	jz	.L022cbc_out_aligned
++	jz	.L024cbc_out_aligned
+ 	movl	%ebx,%ecx
+ 	leal	(%esp),%esi
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+-.L022cbc_out_aligned:
++.L024cbc_out_aligned:
+ 	movl	4(%ebp),%esi
+ 	movl	8(%ebp),%ecx
+ 	addl	%ebx,%edi
+ 	addl	%ebx,%esi
+ 	subl	%ebx,%ecx
+ 	movl	$512,%ebx
+-	jz	.L023cbc_break
++	jz	.L025cbc_break
+ 	cmpl	%ebx,%ecx
+-	jae	.L019cbc_loop
+-.L020cbc_unaligned_tail:
++	jae	.L021cbc_loop
++.L022cbc_unaligned_tail:
+ 	xorl	%eax,%eax
+ 	cmpl	%ebp,%esp
+ 	cmovel	%ecx,%eax
+@@ -460,24 +476,24 @@ padlock_cbc_encrypt:
+ 	movl	%esp,%esi
+ 	movl	%eax,%edi
+ 	movl	%ebx,%ecx
+-	jmp	.L019cbc_loop
++	jmp	.L021cbc_loop
+ .align	16
+-.L023cbc_break:
++.L025cbc_break:
+ 	cmpl	%ebp,%esp
+-	je	.L024cbc_done
++	je	.L026cbc_done
+ 	pxor	%xmm0,%xmm0
+ 	leal	(%esp),%eax
+-.L025cbc_bzero:
++.L027cbc_bzero:
+ 	movaps	%xmm0,(%eax)
+ 	leal	16(%eax),%eax
+ 	cmpl	%eax,%ebp
+-	ja	.L025cbc_bzero
+-.L024cbc_done:
++	ja	.L027cbc_bzero
++.L026cbc_done:
+ 	movl	16(%ebp),%ebp
+ 	leal	24(%ebp),%esp
+-	jmp	.L026cbc_exit
++	jmp	.L028cbc_exit
+ .align	16
+-.L018cbc_aligned:
++.L020cbc_aligned:
+ 	leal	(%esi,%ecx,1),%ebp
+ 	negl	%ebp
+ 	andl	$4095,%ebp
+@@ -487,7 +503,7 @@ padlock_cbc_encrypt:
+ 	cmovael	%eax,%ebp
+ 	andl	%ecx,%ebp
+ 	subl	%ebp,%ecx
+-	jz	.L027cbc_aligned_tail
++	jz	.L029cbc_aligned_tail
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+@@ -495,8 +511,8 @@ padlock_cbc_encrypt:
+ 	movaps	(%eax),%xmm0
+ 	movaps	%xmm0,-16(%edx)
+ 	testl	%ebp,%ebp
+-	jz	.L026cbc_exit
+-.L027cbc_aligned_tail:
++	jz	.L028cbc_exit
++.L029cbc_aligned_tail:
+ 	movl	%ebp,%ecx
+ 	leal	-24(%esp),%ebp
+ 	movl	%ebp,%esp
+@@ -513,11 +529,11 @@ padlock_cbc_encrypt:
+ 	movl	%esp,%esi
+ 	movl	%eax,%edi
+ 	movl	%ebx,%ecx
+-	jmp	.L019cbc_loop
+-.L026cbc_exit:
++	jmp	.L021cbc_loop
++.L028cbc_exit:
+ 	movl	$1,%eax
+ 	leal	4(%esp),%esp
+-.L016cbc_abort:
++.L018cbc_abort:
+ 	popl	%edi
+ 	popl	%esi
+ 	popl	%ebx
+@@ -529,6 +545,7 @@ padlock_cbc_encrypt:
+ .align	16
+ padlock_cfb_encrypt:
+ .L_padlock_cfb_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -538,25 +555,25 @@ padlock_cfb_encrypt:
+ 	movl	28(%esp),%edx
+ 	movl	32(%esp),%ecx
+ 	testl	$15,%edx
+-	jnz	.L028cfb_abort
++	jnz	.L030cfb_abort
+ 	testl	$15,%ecx
+-	jnz	.L028cfb_abort
+-	leal	.Lpadlock_saved_context-.L029cfb_pic_point,%eax
++	jnz	.L030cfb_abort
++	leal	.Lpadlock_saved_context-.L031cfb_pic_point,%eax
+ 	pushfl
+ 	cld
+ 	call	_padlock_verify_ctx
+-.L029cfb_pic_point:
++.L031cfb_pic_point:
+ 	leal	16(%edx),%edx
+ 	xorl	%eax,%eax
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%edx)
+-	jnz	.L030cfb_aligned
++	jnz	.L032cfb_aligned
+ 	testl	$15,%edi
+ 	setz	%al
+ 	testl	$15,%esi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+-	jnz	.L030cfb_aligned
++	jnz	.L032cfb_aligned
+ 	negl	%eax
+ 	movl	$512,%ebx
+ 	notl	%eax
+@@ -574,9 +591,9 @@ padlock_cfb_encrypt:
+ 	andl	$-16,%ebp
+ 	andl	$-16,%esp
+ 	movl	%eax,16(%ebp)
+-	jmp	.L031cfb_loop
++	jmp	.L033cfb_loop
+ .align	16
+-.L031cfb_loop:
++.L033cfb_loop:
+ 	movl	%edi,(%ebp)
+ 	movl	%esi,4(%ebp)
+ 	movl	%ecx,8(%ebp)
+@@ -585,13 +602,13 @@ padlock_cfb_encrypt:
+ 	testl	$15,%edi
+ 	cmovnzl	%esp,%edi
+ 	testl	$15,%esi
+-	jz	.L032cfb_inp_aligned
++	jz	.L034cfb_inp_aligned
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+ 	movl	%ebx,%ecx
+ 	movl	%edi,%esi
+-.L032cfb_inp_aligned:
++.L034cfb_inp_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+@@ -601,45 +618,45 @@ padlock_cfb_encrypt:
+ 	movl	(%ebp),%edi
+ 	movl	12(%ebp),%ebx
+ 	testl	$15,%edi
+-	jz	.L033cfb_out_aligned
++	jz	.L035cfb_out_aligned
+ 	movl	%ebx,%ecx
+ 	leal	(%esp),%esi
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+-.L033cfb_out_aligned:
++.L035cfb_out_aligned:
+ 	movl	4(%ebp),%esi
+ 	movl	8(%ebp),%ecx
+ 	addl	%ebx,%edi
+ 	addl	%ebx,%esi
+ 	subl	%ebx,%ecx
+ 	movl	$512,%ebx
+-	jnz	.L031cfb_loop
++	jnz	.L033cfb_loop
+ 	cmpl	%ebp,%esp
+-	je	.L034cfb_done
++	je	.L036cfb_done
+ 	pxor	%xmm0,%xmm0
+ 	leal	(%esp),%eax
+-.L035cfb_bzero:
++.L037cfb_bzero:
+ 	movaps	%xmm0,(%eax)
+ 	leal	16(%eax),%eax
+ 	cmpl	%eax,%ebp
+-	ja	.L035cfb_bzero
+-.L034cfb_done:
++	ja	.L037cfb_bzero
++.L036cfb_done:
+ 	movl	16(%ebp),%ebp
+ 	leal	24(%ebp),%esp
+-	jmp	.L036cfb_exit
++	jmp	.L038cfb_exit
+ .align	16
+-.L030cfb_aligned:
++.L032cfb_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+ .byte	243,15,167,224
+ 	movaps	(%eax),%xmm0
+ 	movaps	%xmm0,-16(%edx)
+-.L036cfb_exit:
++.L038cfb_exit:
+ 	movl	$1,%eax
+ 	leal	4(%esp),%esp
+-.L028cfb_abort:
++.L030cfb_abort:
+ 	popl	%edi
+ 	popl	%esi
+ 	popl	%ebx
+@@ -651,6 +668,7 @@ padlock_cfb_encrypt:
+ .align	16
+ padlock_ofb_encrypt:
+ .L_padlock_ofb_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -660,25 +678,25 @@ padlock_ofb_encrypt:
+ 	movl	28(%esp),%edx
+ 	movl	32(%esp),%ecx
+ 	testl	$15,%edx
+-	jnz	.L037ofb_abort
++	jnz	.L039ofb_abort
+ 	testl	$15,%ecx
+-	jnz	.L037ofb_abort
+-	leal	.Lpadlock_saved_context-.L038ofb_pic_point,%eax
++	jnz	.L039ofb_abort
++	leal	.Lpadlock_saved_context-.L040ofb_pic_point,%eax
+ 	pushfl
+ 	cld
+ 	call	_padlock_verify_ctx
+-.L038ofb_pic_point:
++.L040ofb_pic_point:
+ 	leal	16(%edx),%edx
+ 	xorl	%eax,%eax
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%edx)
+-	jnz	.L039ofb_aligned
++	jnz	.L041ofb_aligned
+ 	testl	$15,%edi
+ 	setz	%al
+ 	testl	$15,%esi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+-	jnz	.L039ofb_aligned
++	jnz	.L041ofb_aligned
+ 	negl	%eax
+ 	movl	$512,%ebx
+ 	notl	%eax
+@@ -696,9 +714,9 @@ padlock_ofb_encrypt:
+ 	andl	$-16,%ebp
+ 	andl	$-16,%esp
+ 	movl	%eax,16(%ebp)
+-	jmp	.L040ofb_loop
++	jmp	.L042ofb_loop
+ .align	16
+-.L040ofb_loop:
++.L042ofb_loop:
+ 	movl	%edi,(%ebp)
+ 	movl	%esi,4(%ebp)
+ 	movl	%ecx,8(%ebp)
+@@ -707,13 +725,13 @@ padlock_ofb_encrypt:
+ 	testl	$15,%edi
+ 	cmovnzl	%esp,%edi
+ 	testl	$15,%esi
+-	jz	.L041ofb_inp_aligned
++	jz	.L043ofb_inp_aligned
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+ 	movl	%ebx,%ecx
+ 	movl	%edi,%esi
+-.L041ofb_inp_aligned:
++.L043ofb_inp_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+@@ -723,45 +741,45 @@ padlock_ofb_encrypt:
+ 	movl	(%ebp),%edi
+ 	movl	12(%ebp),%ebx
+ 	testl	$15,%edi
+-	jz	.L042ofb_out_aligned
++	jz	.L044ofb_out_aligned
+ 	movl	%ebx,%ecx
+ 	leal	(%esp),%esi
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+-.L042ofb_out_aligned:
++.L044ofb_out_aligned:
+ 	movl	4(%ebp),%esi
+ 	movl	8(%ebp),%ecx
+ 	addl	%ebx,%edi
+ 	addl	%ebx,%esi
+ 	subl	%ebx,%ecx
+ 	movl	$512,%ebx
+-	jnz	.L040ofb_loop
++	jnz	.L042ofb_loop
+ 	cmpl	%ebp,%esp
+-	je	.L043ofb_done
++	je	.L045ofb_done
+ 	pxor	%xmm0,%xmm0
+ 	leal	(%esp),%eax
+-.L044ofb_bzero:
++.L046ofb_bzero:
+ 	movaps	%xmm0,(%eax)
+ 	leal	16(%eax),%eax
+ 	cmpl	%eax,%ebp
+-	ja	.L044ofb_bzero
+-.L043ofb_done:
++	ja	.L046ofb_bzero
++.L045ofb_done:
+ 	movl	16(%ebp),%ebp
+ 	leal	24(%ebp),%esp
+-	jmp	.L045ofb_exit
++	jmp	.L047ofb_exit
+ .align	16
+-.L039ofb_aligned:
++.L041ofb_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+ .byte	243,15,167,232
+ 	movaps	(%eax),%xmm0
+ 	movaps	%xmm0,-16(%edx)
+-.L045ofb_exit:
++.L047ofb_exit:
+ 	movl	$1,%eax
+ 	leal	4(%esp),%esp
+-.L037ofb_abort:
++.L039ofb_abort:
+ 	popl	%edi
+ 	popl	%esi
+ 	popl	%ebx
+@@ -773,6 +791,7 @@ padlock_ofb_encrypt:
+ .align	16
+ padlock_ctr32_encrypt:
+ .L_padlock_ctr32_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -782,14 +801,14 @@ padlock_ctr32_encrypt:
+ 	movl	28(%esp),%edx
+ 	movl	32(%esp),%ecx
+ 	testl	$15,%edx
+-	jnz	.L046ctr32_abort
++	jnz	.L048ctr32_abort
+ 	testl	$15,%ecx
+-	jnz	.L046ctr32_abort
+-	leal	.Lpadlock_saved_context-.L047ctr32_pic_point,%eax
++	jnz	.L048ctr32_abort
++	leal	.Lpadlock_saved_context-.L049ctr32_pic_point,%eax
+ 	pushfl
+ 	cld
+ 	call	_padlock_verify_ctx
+-.L047ctr32_pic_point:
++.L049ctr32_pic_point:
+ 	leal	16(%edx),%edx
+ 	xorl	%eax,%eax
+ 	movq	-16(%edx),%mm0
+@@ -809,9 +828,9 @@ padlock_ctr32_encrypt:
+ 	andl	$-16,%ebp
+ 	andl	$-16,%esp
+ 	movl	%eax,16(%ebp)
+-	jmp	.L048ctr32_loop
++	jmp	.L050ctr32_loop
+ .align	16
+-.L048ctr32_loop:
++.L050ctr32_loop:
+ 	movl	%edi,(%ebp)
+ 	movl	%esi,4(%ebp)
+ 	movl	%ecx,8(%ebp)
+@@ -820,7 +839,7 @@ padlock_ctr32_encrypt:
+ 	movl	-4(%edx),%ecx
+ 	xorl	%edi,%edi
+ 	movl	-8(%edx),%eax
+-.L049ctr32_prepare:
++.L051ctr32_prepare:
+ 	movl	%ecx,12(%esp,%edi,1)
+ 	bswap	%ecx
+ 	movq	%mm0,(%esp,%edi,1)
+@@ -829,7 +848,7 @@ padlock_ctr32_encrypt:
+ 	bswap	%ecx
+ 	leal	16(%edi),%edi
+ 	cmpl	%ebx,%edi
+-	jb	.L049ctr32_prepare
++	jb	.L051ctr32_prepare
+ 	movl	%ecx,-4(%edx)
+ 	leal	(%esp),%esi
+ 	leal	(%esp),%edi
+@@ -842,33 +861,33 @@ padlock_ctr32_encrypt:
+ 	movl	12(%ebp),%ebx
+ 	movl	4(%ebp),%esi
+ 	xorl	%ecx,%ecx
+-.L050ctr32_xor:
++.L052ctr32_xor:
+ 	movups	(%esi,%ecx,1),%xmm1
+ 	leal	16(%ecx),%ecx
+ 	pxor	-16(%esp,%ecx,1),%xmm1
+ 	movups	%xmm1,-16(%edi,%ecx,1)
+ 	cmpl	%ebx,%ecx
+-	jb	.L050ctr32_xor
++	jb	.L052ctr32_xor
+ 	movl	8(%ebp),%ecx
+ 	addl	%ebx,%edi
+ 	addl	%ebx,%esi
+ 	subl	%ebx,%ecx
+ 	movl	$512,%ebx
+-	jnz	.L048ctr32_loop
++	jnz	.L050ctr32_loop
+ 	pxor	%xmm0,%xmm0
+ 	leal	(%esp),%eax
+-.L051ctr32_bzero:
++.L053ctr32_bzero:
+ 	movaps	%xmm0,(%eax)
+ 	leal	16(%eax),%eax
+ 	cmpl	%eax,%ebp
+-	ja	.L051ctr32_bzero
+-.L052ctr32_done:
++	ja	.L053ctr32_bzero
++.L054ctr32_done:
+ 	movl	16(%ebp),%ebp
+ 	leal	24(%ebp),%esp
+ 	movl	$1,%eax
+ 	leal	4(%esp),%esp
+ 	emms
+-.L046ctr32_abort:
++.L048ctr32_abort:
+ 	popl	%edi
+ 	popl	%esi
+ 	popl	%ebx
+@@ -880,6 +899,7 @@ padlock_ctr32_encrypt:
+ .align	16
+ padlock_xstore:
+ .L_padlock_xstore_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	movl	8(%esp),%edi
+ 	movl	12(%esp),%edx
+@@ -890,14 +910,15 @@ padlock_xstore:
+ .type	_win32_segv_handler,@function
+ .align	16
+ _win32_segv_handler:
++.byte	243,15,30,251
+ 	movl	$1,%eax
+ 	movl	4(%esp),%edx
+ 	movl	12(%esp),%ecx
+ 	cmpl	$3221225477,(%edx)
+-	jne	.L053ret
++	jne	.L055ret
+ 	addl	$4,184(%ecx)
+ 	movl	$0,%eax
+-.L053ret:
++.L055ret:
+ 	ret
+ .size	_win32_segv_handler,.-_win32_segv_handler
+ .globl	padlock_sha1_oneshot
+@@ -905,6 +926,7 @@ _win32_segv_handler:
+ .align	16
+ padlock_sha1_oneshot:
+ .L_padlock_sha1_oneshot_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	xorl	%eax,%eax
+@@ -936,6 +958,7 @@ padlock_sha1_oneshot:
+ .align	16
+ padlock_sha1_blocks:
+ .L_padlock_sha1_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	movl	12(%esp),%edi
+@@ -966,6 +989,7 @@ padlock_sha1_blocks:
+ .align	16
+ padlock_sha256_oneshot:
+ .L_padlock_sha256_oneshot_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	xorl	%eax,%eax
+@@ -997,6 +1021,7 @@ padlock_sha256_oneshot:
+ .align	16
+ padlock_sha256_blocks:
+ .L_padlock_sha256_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	movl	12(%esp),%edi
+@@ -1027,6 +1052,7 @@ padlock_sha256_blocks:
+ .align	16
+ padlock_sha512_blocks:
+ .L_padlock_sha512_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	movl	12(%esp),%edi
+@@ -1069,7 +1095,21 @@ padlock_sha512_blocks:
+ .Lpadlock_saved_context:
+ .long	0
+ 
++	.section ".note.gnu.property", "a"
++	.p2align 2
++	.long 1f - 0f
++	.long 4f - 1f
++	.long 5
++0:
++	.asciz "GNU"
++1:
++	.p2align 2
++	.long 0xc0000002
++	.long 3f - 2f
++2:
++	.long 3
++3:
++	.p2align 2
++4:
+ 
+ .section .note.GNU-stack,"",%progbits
+-
+-
+diff --git a/lib/accelerated/x86/elf/e_padlock-x86_64.s b/lib/accelerated/x86/elf/e_padlock-x86_64.s
+index c161f0a73..f92da756c 100644
+--- a/lib/accelerated/x86/elf/e_padlock-x86_64.s
++++ b/lib/accelerated/x86/elf/e_padlock-x86_64.s
+@@ -1,4 +1,4 @@
+-# Copyright (c) 2011-2013, Andy Polyakov <appro@openssl.org>
++# Copyright (c) 2011-2016, Andy Polyakov <appro@openssl.org>
+ # All rights reserved.
+ #
+ # Redistribution and use in source and binary forms, with or without
+@@ -42,36 +42,50 @@
+ .type	padlock_capability,@function
+ .align	16
+ padlock_capability:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	movq	%rbx,%r8
+ 	xorl	%eax,%eax
+ 	cpuid
+ 	xorl	%eax,%eax
+-	cmpl	$1953391939,%ebx
++	cmpl	$0x746e6543,%ebx
++	jne	.Lzhaoxin
++	cmpl	$0x48727561,%edx
+ 	jne	.Lnoluck
+-	cmpl	$1215460705,%edx
++	cmpl	$0x736c7561,%ecx
+ 	jne	.Lnoluck
+-	cmpl	$1936487777,%ecx
++	jmp	.LzhaoxinEnd
++.Lzhaoxin:
++	cmpl	$0x68532020,%ebx
+ 	jne	.Lnoluck
+-	movl	$3221225472,%eax
++	cmpl	$0x68676e61,%edx
++	jne	.Lnoluck
++	cmpl	$0x20206961,%ecx
++	jne	.Lnoluck
++.LzhaoxinEnd:
++	movl	$0xC0000000,%eax
+ 	cpuid
+ 	movl	%eax,%edx
+ 	xorl	%eax,%eax
+-	cmpl	$3221225473,%edx
++	cmpl	$0xC0000001,%edx
+ 	jb	.Lnoluck
+-	movl	$3221225473,%eax
++	movl	$0xC0000001,%eax
+ 	cpuid
+ 	movl	%edx,%eax
+-	andl	$4294967279,%eax
+-	orl	$16,%eax
++	andl	$0xffffffef,%eax
++	orl	$0x10,%eax
+ .Lnoluck:
+ 	movq	%r8,%rbx
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_capability,.-padlock_capability
+ 
+ .globl	padlock_key_bswap
+ .type	padlock_key_bswap,@function
+ .align	16
+ padlock_key_bswap:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	movl	240(%rdi),%edx
+ .Lbswap_loop:
+ 	movl	(%rdi),%eax
+@@ -81,23 +95,29 @@ padlock_key_bswap:
+ 	subl	$1,%edx
+ 	jnz	.Lbswap_loop
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_key_bswap,.-padlock_key_bswap
+ 
+ .globl	padlock_verify_context
+ .type	padlock_verify_context,@function
+ .align	16
+ padlock_verify_context:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	movq	%rdi,%rdx
+ 	pushf
+ 	leaq	.Lpadlock_saved_context(%rip),%rax
+ 	call	_padlock_verify_ctx
+ 	leaq	8(%rsp),%rsp
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_verify_context,.-padlock_verify_context
+ 
+ .type	_padlock_verify_ctx,@function
+ .align	16
+ _padlock_verify_ctx:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	movq	8(%rsp),%r8
+ 	btq	$30,%r8
+ 	jnc	.Lverified
+@@ -108,43 +128,55 @@ _padlock_verify_ctx:
+ .Lverified:
+ 	movq	%rdx,(%rax)
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	_padlock_verify_ctx,.-_padlock_verify_ctx
+ 
+ .globl	padlock_reload_key
+ .type	padlock_reload_key,@function
+ .align	16
+ padlock_reload_key:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	pushf
+ 	popf
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_reload_key,.-padlock_reload_key
+ 
+ .globl	padlock_aes_block
+ .type	padlock_aes_block,@function
+ .align	16
+ padlock_aes_block:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	movq	%rbx,%r8
+ 	movq	$1,%rcx
+ 	leaq	32(%rdx),%rbx
+ 	leaq	16(%rdx),%rdx
+-.byte	0xf3,0x0f,0xa7,0xc8	
++.byte	0xf3,0x0f,0xa7,0xc8
+ 	movq	%r8,%rbx
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_aes_block,.-padlock_aes_block
+ 
+ .globl	padlock_xstore
+ .type	padlock_xstore,@function
+ .align	16
+ padlock_xstore:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	movl	%esi,%edx
+-.byte	0x0f,0xa7,0xc0		
++.byte	0x0f,0xa7,0xc0
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_xstore,.-padlock_xstore
+ 
+ .globl	padlock_sha1_oneshot
+ .type	padlock_sha1_oneshot,@function
+ .align	16
+ padlock_sha1_oneshot:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	movq	%rdx,%rcx
+ 	movq	%rdi,%rdx
+ 	movups	(%rdi),%xmm0
+@@ -154,19 +186,22 @@ padlock_sha1_oneshot:
+ 	movq	%rsp,%rdi
+ 	movl	%eax,16(%rsp)
+ 	xorq	%rax,%rax
+-.byte	0xf3,0x0f,0xa6,0xc8	
++.byte	0xf3,0x0f,0xa6,0xc8
+ 	movaps	(%rsp),%xmm0
+ 	movl	16(%rsp),%eax
+ 	addq	$128+8,%rsp
+ 	movups	%xmm0,(%rdx)
+ 	movl	%eax,16(%rdx)
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_sha1_oneshot,.-padlock_sha1_oneshot
+ 
+ .globl	padlock_sha1_blocks
+ .type	padlock_sha1_blocks,@function
+ .align	16
+ padlock_sha1_blocks:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	movq	%rdx,%rcx
+ 	movq	%rdi,%rdx
+ 	movups	(%rdi),%xmm0
+@@ -176,19 +211,22 @@ padlock_sha1_blocks:
+ 	movq	%rsp,%rdi
+ 	movl	%eax,16(%rsp)
+ 	movq	$-1,%rax
+-.byte	0xf3,0x0f,0xa6,0xc8	
++.byte	0xf3,0x0f,0xa6,0xc8
+ 	movaps	(%rsp),%xmm0
+ 	movl	16(%rsp),%eax
+ 	addq	$128+8,%rsp
+ 	movups	%xmm0,(%rdx)
+ 	movl	%eax,16(%rdx)
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_sha1_blocks,.-padlock_sha1_blocks
+ 
+ .globl	padlock_sha256_oneshot
+ .type	padlock_sha256_oneshot,@function
+ .align	16
+ padlock_sha256_oneshot:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	movq	%rdx,%rcx
+ 	movq	%rdi,%rdx
+ 	movups	(%rdi),%xmm0
+@@ -198,19 +236,22 @@ padlock_sha256_oneshot:
+ 	movq	%rsp,%rdi
+ 	movaps	%xmm1,16(%rsp)
+ 	xorq	%rax,%rax
+-.byte	0xf3,0x0f,0xa6,0xd0	
++.byte	0xf3,0x0f,0xa6,0xd0
+ 	movaps	(%rsp),%xmm0
+ 	movaps	16(%rsp),%xmm1
+ 	addq	$128+8,%rsp
+ 	movups	%xmm0,(%rdx)
+ 	movups	%xmm1,16(%rdx)
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_sha256_oneshot,.-padlock_sha256_oneshot
+ 
+ .globl	padlock_sha256_blocks
+ .type	padlock_sha256_blocks,@function
+ .align	16
+ padlock_sha256_blocks:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	movq	%rdx,%rcx
+ 	movq	%rdi,%rdx
+ 	movups	(%rdi),%xmm0
+@@ -220,19 +261,22 @@ padlock_sha256_blocks:
+ 	movq	%rsp,%rdi
+ 	movaps	%xmm1,16(%rsp)
+ 	movq	$-1,%rax
+-.byte	0xf3,0x0f,0xa6,0xd0	
++.byte	0xf3,0x0f,0xa6,0xd0
+ 	movaps	(%rsp),%xmm0
+ 	movaps	16(%rsp),%xmm1
+ 	addq	$128+8,%rsp
+ 	movups	%xmm0,(%rdx)
+ 	movups	%xmm1,16(%rdx)
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_sha256_blocks,.-padlock_sha256_blocks
+ 
+ .globl	padlock_sha512_blocks
+ .type	padlock_sha512_blocks,@function
+ .align	16
+ padlock_sha512_blocks:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	movq	%rdx,%rcx
+ 	movq	%rdi,%rdx
+ 	movups	(%rdi),%xmm0
+@@ -245,7 +289,7 @@ padlock_sha512_blocks:
+ 	movaps	%xmm1,16(%rsp)
+ 	movaps	%xmm2,32(%rsp)
+ 	movaps	%xmm3,48(%rsp)
+-.byte	0xf3,0x0f,0xa6,0xe0	
++.byte	0xf3,0x0f,0xa6,0xe0
+ 	movaps	(%rsp),%xmm0
+ 	movaps	16(%rsp),%xmm1
+ 	movaps	32(%rsp),%xmm2
+@@ -256,11 +300,14 @@ padlock_sha512_blocks:
+ 	movups	%xmm2,32(%rdx)
+ 	movups	%xmm3,48(%rdx)
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_sha512_blocks,.-padlock_sha512_blocks
+ .globl	padlock_ecb_encrypt
+ .type	padlock_ecb_encrypt,@function
+ .align	16
+ padlock_ecb_encrypt:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	pushq	%rbp
+ 	pushq	%rbx
+ 
+@@ -278,9 +325,9 @@ padlock_ecb_encrypt:
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%rdx)
+ 	jnz	.Lecb_aligned
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	setz	%al
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+ 	jnz	.Lecb_aligned
+@@ -304,7 +351,7 @@ padlock_ecb_encrypt:
+ 	cmoveq	%rdi,%rax
+ 	addq	%rcx,%rax
+ 	negq	%rax
+-	andq	$4095,%rax
++	andq	$0xfff,%rax
+ 	cmpq	$128,%rax
+ 	movq	$-128,%rax
+ 	cmovaeq	%rbx,%rax
+@@ -320,12 +367,12 @@ padlock_ecb_encrypt:
+ 	movq	%rcx,%r10
+ 	movq	%rbx,%rcx
+ 	movq	%rbx,%r11
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	cmovnzq	%rsp,%rdi
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	jz	.Lecb_inp_aligned
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ 	movq	%rbx,%rcx
+ 	movq	%rdi,%rsi
+@@ -333,15 +380,15 @@ padlock_ecb_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,200	
++.byte	0xf3,0x0f,0xa7,200
+ 	movq	%r8,%rdi
+ 	movq	%r11,%rbx
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	jz	.Lecb_out_aligned
+ 	movq	%rbx,%rcx
+ 	leaq	(%rsp),%rsi
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ .Lecb_out_aligned:
+ 	movq	%r9,%rsi
+@@ -362,7 +409,7 @@ padlock_ecb_encrypt:
+ 	subq	%rax,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	movq	%rsp,%rsi
+ 	movq	%r8,%rdi
+ 	movq	%rbx,%rcx
+@@ -388,7 +435,7 @@ padlock_ecb_encrypt:
+ .Lecb_aligned:
+ 	leaq	(%rsi,%rcx,1),%rbp
+ 	negq	%rbp
+-	andq	$4095,%rbp
++	andq	$0xfff,%rbp
+ 	xorl	%eax,%eax
+ 	cmpq	$128,%rbp
+ 	movq	$128-1,%rbp
+@@ -399,7 +446,7 @@ padlock_ecb_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,200	
++.byte	0xf3,0x0f,0xa7,200
+ 	testq	%rbp,%rbp
+ 	jz	.Lecb_exit
+ 
+@@ -411,7 +458,7 @@ padlock_ecb_encrypt:
+ 	subq	%rcx,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	leaq	(%r8),%rdi
+ 	leaq	(%rsp),%rsi
+ 	movq	%rbx,%rcx
+@@ -423,11 +470,14 @@ padlock_ecb_encrypt:
+ 	popq	%rbx
+ 	popq	%rbp
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_ecb_encrypt,.-padlock_ecb_encrypt
+ .globl	padlock_cbc_encrypt
+ .type	padlock_cbc_encrypt,@function
+ .align	16
+ padlock_cbc_encrypt:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	pushq	%rbp
+ 	pushq	%rbx
+ 
+@@ -445,9 +495,9 @@ padlock_cbc_encrypt:
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%rdx)
+ 	jnz	.Lcbc_aligned
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	setz	%al
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+ 	jnz	.Lcbc_aligned
+@@ -471,7 +521,7 @@ padlock_cbc_encrypt:
+ 	cmoveq	%rdi,%rax
+ 	addq	%rcx,%rax
+ 	negq	%rax
+-	andq	$4095,%rax
++	andq	$0xfff,%rax
+ 	cmpq	$64,%rax
+ 	movq	$-64,%rax
+ 	cmovaeq	%rbx,%rax
+@@ -487,12 +537,12 @@ padlock_cbc_encrypt:
+ 	movq	%rcx,%r10
+ 	movq	%rbx,%rcx
+ 	movq	%rbx,%r11
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	cmovnzq	%rsp,%rdi
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	jz	.Lcbc_inp_aligned
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ 	movq	%rbx,%rcx
+ 	movq	%rdi,%rsi
+@@ -500,17 +550,17 @@ padlock_cbc_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,208	
++.byte	0xf3,0x0f,0xa7,208
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ 	movq	%r8,%rdi
+ 	movq	%r11,%rbx
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	jz	.Lcbc_out_aligned
+ 	movq	%rbx,%rcx
+ 	leaq	(%rsp),%rsi
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ .Lcbc_out_aligned:
+ 	movq	%r9,%rsi
+@@ -531,7 +581,7 @@ padlock_cbc_encrypt:
+ 	subq	%rax,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	movq	%rsp,%rsi
+ 	movq	%r8,%rdi
+ 	movq	%rbx,%rcx
+@@ -557,7 +607,7 @@ padlock_cbc_encrypt:
+ .Lcbc_aligned:
+ 	leaq	(%rsi,%rcx,1),%rbp
+ 	negq	%rbp
+-	andq	$4095,%rbp
++	andq	$0xfff,%rbp
+ 	xorl	%eax,%eax
+ 	cmpq	$64,%rbp
+ 	movq	$64-1,%rbp
+@@ -568,7 +618,7 @@ padlock_cbc_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,208	
++.byte	0xf3,0x0f,0xa7,208
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ 	testq	%rbp,%rbp
+@@ -582,7 +632,7 @@ padlock_cbc_encrypt:
+ 	subq	%rcx,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	leaq	(%r8),%rdi
+ 	leaq	(%rsp),%rsi
+ 	movq	%rbx,%rcx
+@@ -594,11 +644,14 @@ padlock_cbc_encrypt:
+ 	popq	%rbx
+ 	popq	%rbp
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_cbc_encrypt,.-padlock_cbc_encrypt
+ .globl	padlock_cfb_encrypt
+ .type	padlock_cfb_encrypt,@function
+ .align	16
+ padlock_cfb_encrypt:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	pushq	%rbp
+ 	pushq	%rbx
+ 
+@@ -616,9 +669,9 @@ padlock_cfb_encrypt:
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%rdx)
+ 	jnz	.Lcfb_aligned
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	setz	%al
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+ 	jnz	.Lcfb_aligned
+@@ -645,12 +698,12 @@ padlock_cfb_encrypt:
+ 	movq	%rcx,%r10
+ 	movq	%rbx,%rcx
+ 	movq	%rbx,%r11
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	cmovnzq	%rsp,%rdi
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	jz	.Lcfb_inp_aligned
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ 	movq	%rbx,%rcx
+ 	movq	%rdi,%rsi
+@@ -658,17 +711,17 @@ padlock_cfb_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,224	
++.byte	0xf3,0x0f,0xa7,224
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ 	movq	%r8,%rdi
+ 	movq	%r11,%rbx
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	jz	.Lcfb_out_aligned
+ 	movq	%rbx,%rcx
+ 	leaq	(%rsp),%rsi
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ .Lcfb_out_aligned:
+ 	movq	%r9,%rsi
+@@ -698,7 +751,7 @@ padlock_cfb_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,224	
++.byte	0xf3,0x0f,0xa7,224
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ .Lcfb_exit:
+@@ -708,11 +761,14 @@ padlock_cfb_encrypt:
+ 	popq	%rbx
+ 	popq	%rbp
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_cfb_encrypt,.-padlock_cfb_encrypt
+ .globl	padlock_ofb_encrypt
+ .type	padlock_ofb_encrypt,@function
+ .align	16
+ padlock_ofb_encrypt:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	pushq	%rbp
+ 	pushq	%rbx
+ 
+@@ -730,9 +786,9 @@ padlock_ofb_encrypt:
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%rdx)
+ 	jnz	.Lofb_aligned
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	setz	%al
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+ 	jnz	.Lofb_aligned
+@@ -759,12 +815,12 @@ padlock_ofb_encrypt:
+ 	movq	%rcx,%r10
+ 	movq	%rbx,%rcx
+ 	movq	%rbx,%r11
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	cmovnzq	%rsp,%rdi
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	jz	.Lofb_inp_aligned
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ 	movq	%rbx,%rcx
+ 	movq	%rdi,%rsi
+@@ -772,17 +828,17 @@ padlock_ofb_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,232	
++.byte	0xf3,0x0f,0xa7,232
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ 	movq	%r8,%rdi
+ 	movq	%r11,%rbx
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	jz	.Lofb_out_aligned
+ 	movq	%rbx,%rcx
+ 	leaq	(%rsp),%rsi
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ .Lofb_out_aligned:
+ 	movq	%r9,%rsi
+@@ -812,7 +868,7 @@ padlock_ofb_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,232	
++.byte	0xf3,0x0f,0xa7,232
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ .Lofb_exit:
+@@ -822,11 +878,14 @@ padlock_ofb_encrypt:
+ 	popq	%rbx
+ 	popq	%rbp
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_ofb_encrypt,.-padlock_ofb_encrypt
+ .globl	padlock_ctr32_encrypt
+ .type	padlock_ctr32_encrypt,@function
+ .align	16
+ padlock_ctr32_encrypt:
++.cfi_startproc	
++.byte	243,15,30,250
+ 	pushq	%rbp
+ 	pushq	%rbx
+ 
+@@ -844,9 +903,9 @@ padlock_ctr32_encrypt:
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%rdx)
+ 	jnz	.Lctr32_aligned
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	setz	%al
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+ 	jnz	.Lctr32_aligned
+@@ -881,7 +940,7 @@ padlock_ctr32_encrypt:
+ 	cmoveq	%rdi,%rax
+ 	addq	%rcx,%rax
+ 	negq	%rax
+-	andq	$4095,%rax
++	andq	$0xfff,%rax
+ 	cmpq	$32,%rax
+ 	movq	$-32,%rax
+ 	cmovaeq	%rbx,%rax
+@@ -897,12 +956,12 @@ padlock_ctr32_encrypt:
+ 	movq	%rcx,%r10
+ 	movq	%rbx,%rcx
+ 	movq	%rbx,%r11
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	cmovnzq	%rsp,%rdi
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	jz	.Lctr32_inp_aligned
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ 	movq	%rbx,%rcx
+ 	movq	%rdi,%rsi
+@@ -910,23 +969,23 @@ padlock_ctr32_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,216	
++.byte	0xf3,0x0f,0xa7,216
+ 	movl	-4(%rdx),%eax
+-	testl	$4294901760,%eax
++	testl	$0xffff0000,%eax
+ 	jnz	.Lctr32_no_carry
+ 	bswapl	%eax
+-	addl	$65536,%eax
++	addl	$0x10000,%eax
+ 	bswapl	%eax
+ 	movl	%eax,-4(%rdx)
+ .Lctr32_no_carry:
+ 	movq	%r8,%rdi
+ 	movq	%r11,%rbx
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	jz	.Lctr32_out_aligned
+ 	movq	%rbx,%rcx
+ 	leaq	(%rsp),%rsi
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ .Lctr32_out_aligned:
+ 	movq	%r9,%rsi
+@@ -944,7 +1003,7 @@ padlock_ctr32_encrypt:
+ 	cmoveq	%rdi,%rax
+ 	addq	%rcx,%rax
+ 	negq	%rax
+-	andq	$4095,%rax
++	andq	$0xfff,%rax
+ 	cmpq	$32,%rax
+ 	movq	$-32,%rax
+ 	cmovaeq	%rbx,%rax
+@@ -959,7 +1018,7 @@ padlock_ctr32_encrypt:
+ 	subq	%rax,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	movq	%rsp,%rsi
+ 	movq	%r8,%rdi
+ 	movq	%rbx,%rcx
+@@ -986,7 +1045,7 @@ padlock_ctr32_encrypt:
+ 	movl	-4(%rdx),%eax
+ 	bswapl	%eax
+ 	negl	%eax
+-	andl	$65535,%eax
++	andl	$0xffff,%eax
+ 	movq	$1048576,%rbx
+ 	shll	$4,%eax
+ 	cmovzq	%rbx,%rax
+@@ -1003,11 +1062,11 @@ padlock_ctr32_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,216	
++.byte	0xf3,0x0f,0xa7,216
+ 
+ 	movl	-4(%rdx),%eax
+ 	bswapl	%eax
+-	addl	$65536,%eax
++	addl	$0x10000,%eax
+ 	bswapl	%eax
+ 	movl	%eax,-4(%rdx)
+ 
+@@ -1021,7 +1080,7 @@ padlock_ctr32_encrypt:
+ .Lctr32_aligned_skip:
+ 	leaq	(%rsi,%rcx,1),%rbp
+ 	negq	%rbp
+-	andq	$4095,%rbp
++	andq	$0xfff,%rbp
+ 	xorl	%eax,%eax
+ 	cmpq	$32,%rbp
+ 	movq	$32-1,%rbp
+@@ -1032,7 +1091,7 @@ padlock_ctr32_encrypt:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,216	
++.byte	0xf3,0x0f,0xa7,216
+ 	testq	%rbp,%rbp
+ 	jz	.Lctr32_exit
+ 
+@@ -1044,7 +1103,7 @@ padlock_ctr32_encrypt:
+ 	subq	%rcx,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	leaq	(%r8),%rdi
+ 	leaq	(%rsp),%rsi
+ 	movq	%rbx,%rcx
+@@ -1056,6 +1115,7 @@ padlock_ctr32_encrypt:
+ 	popq	%rbx
+ 	popq	%rbp
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	padlock_ctr32_encrypt,.-padlock_ctr32_encrypt
+ .byte	86,73,65,32,80,97,100,108,111,99,107,32,120,56,54,95,54,52,32,109,111,100,117,108,101,44,32,67,82,89,80,84,79,71,65,77,83,32,98,121,32,60,97,112,112,114,111,64,111,112,101,110,115,115,108,46,111,114,103,62,0
+ .align	16
+@@ -1063,8 +1123,26 @@ padlock_ctr32_encrypt:
+ .align	8
+ .Lpadlock_saved_context:
+ .quad	0
+-
++	.section ".note.gnu.property", "a"
++	.p2align 3
++	.long 1f - 0f
++	.long 4f - 1f
++	.long 5
++0:
++	# "GNU" encoded with .byte, since .asciz isn't supported
++	# on Solaris.
++	.byte 0x47
++	.byte 0x4e
++	.byte 0x55
++	.byte 0
++1:
++	.p2align 3
++	.long 0xc0000002
++	.long 3f - 2f
++2:
++	.long 3
++3:
++	.p2align 3
++4:
+ 
+ .section .note.GNU-stack,"",%progbits
+-
+-
+diff --git a/lib/accelerated/x86/elf/ghash-x86_64.s b/lib/accelerated/x86/elf/ghash-x86_64.s
+index 1e4d18b34..8da3f294c 100644
+--- a/lib/accelerated/x86/elf/ghash-x86_64.s
++++ b/lib/accelerated/x86/elf/ghash-x86_64.s
+@@ -45,6 +45,7 @@
+ .align	16
+ gcm_gmult_4bit:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	pushq	%rbx
+ .cfi_adjust_cfa_offset	8
+ .cfi_offset	%rbx,-16
+@@ -156,6 +157,7 @@ gcm_gmult_4bit:
+ .align	16
+ gcm_ghash_4bit:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	pushq	%rbx
+ .cfi_adjust_cfa_offset	8
+ .cfi_offset	%rbx,-16
+@@ -903,6 +905,7 @@ gcm_init_clmul:
+ .align	16
+ gcm_gmult_clmul:
+ .cfi_startproc	
++.byte	243,15,30,250
+ .L_gmult_clmul:
+ 	movdqu	(%rdi),%xmm0
+ 	movdqa	.Lbswap_mask(%rip),%xmm5
+@@ -956,6 +959,7 @@ gcm_gmult_clmul:
+ .align	32
+ gcm_ghash_clmul:
+ .cfi_startproc	
++.byte	243,15,30,250
+ .L_ghash_clmul:
+ 	movdqa	.Lbswap_mask(%rip),%xmm10
+ 
+@@ -1450,6 +1454,7 @@ gcm_init_avx:
+ .align	32
+ gcm_gmult_avx:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	jmp	.L_gmult_clmul
+ .cfi_endproc	
+ .size	gcm_gmult_avx,.-gcm_gmult_avx
+@@ -1458,6 +1463,7 @@ gcm_gmult_avx:
+ .align	32
+ gcm_ghash_avx:
+ .cfi_startproc	
++.byte	243,15,30,250
+ 	vzeroupper
+ 
+ 	vmovdqu	(%rdi),%xmm10
+@@ -1884,5 +1890,26 @@ gcm_ghash_avx:
+ 
+ .byte	71,72,65,83,72,32,102,111,114,32,120,56,54,95,54,52,44,32,67,82,89,80,84,79,71,65,77,83,32,98,121,32,60,97,112,112,114,111,64,111,112,101,110,115,115,108,46,111,114,103,62,0
+ .align	64
++	.section ".note.gnu.property", "a"
++	.p2align 3
++	.long 1f - 0f
++	.long 4f - 1f
++	.long 5
++0:
++	# "GNU" encoded with .byte, since .asciz isn't supported
++	# on Solaris.
++	.byte 0x47
++	.byte 0x4e
++	.byte 0x55
++	.byte 0
++1:
++	.p2align 3
++	.long 0xc0000002
++	.long 3f - 2f
++2:
++	.long 3
++3:
++	.p2align 3
++4:
+ 
+ .section .note.GNU-stack,"",%progbits
+diff --git a/lib/accelerated/x86/elf/sha1-ssse3-x86.s b/lib/accelerated/x86/elf/sha1-ssse3-x86.s
+index 8bfbcb6b3..57b6ba58f 100644
+--- a/lib/accelerated/x86/elf/sha1-ssse3-x86.s
++++ b/lib/accelerated/x86/elf/sha1-ssse3-x86.s
+@@ -43,6 +43,7 @@
+ .align	16
+ sha1_block_data_order:
+ .L_sha1_block_data_order_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -1417,4 +1418,21 @@ sha1_block_data_order:
+ .byte	89,80,84,79,71,65,77,83,32,98,121,32,60,97,112,112
+ .byte	114,111,64,111,112,101,110,115,115,108,46,111,114,103,62,0
+ 
++	.section ".note.gnu.property", "a"
++	.p2align 2
++	.long 1f - 0f
++	.long 4f - 1f
++	.long 5
++0:
++	.asciz "GNU"
++1:
++	.p2align 2
++	.long 0xc0000002
++	.long 3f - 2f
++2:
++	.long 3
++3:
++	.p2align 2
++4:
++
+ .section .note.GNU-stack,"",%progbits
+diff --git a/lib/accelerated/x86/elf/sha1-ssse3-x86_64.s b/lib/accelerated/x86/elf/sha1-ssse3-x86_64.s
+index 1e6546e11..54095050c 100644
+--- a/lib/accelerated/x86/elf/sha1-ssse3-x86_64.s
++++ b/lib/accelerated/x86/elf/sha1-ssse3-x86_64.s
+@@ -1460,8 +1460,8 @@ _shaext_shortcut:
+ 	pshufd	$27,%xmm1,%xmm1
+ 	movdqu	%xmm0,(%rdi)
+ 	movd	%xmm1,16(%rdi)
+-.cfi_endproc	
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	sha1_block_data_order_shaext,.-sha1_block_data_order_shaext
+ .type	sha1_block_data_order_ssse3,@function
+ .align	16
+@@ -5487,5 +5487,26 @@ K_XX_XX:
+ .byte	0xf,0xe,0xd,0xc,0xb,0xa,0x9,0x8,0x7,0x6,0x5,0x4,0x3,0x2,0x1,0x0
+ .byte	83,72,65,49,32,98,108,111,99,107,32,116,114,97,110,115,102,111,114,109,32,102,111,114,32,120,56,54,95,54,52,44,32,67,82,89,80,84,79,71,65,77,83,32,98,121,32,60,97,112,112,114,111,64,111,112,101,110,115,115,108,46,111,114,103,62,0
+ .align	64
++	.section ".note.gnu.property", "a"
++	.p2align 3
++	.long 1f - 0f
++	.long 4f - 1f
++	.long 5
++0:
++	# "GNU" encoded with .byte, since .asciz isn't supported
++	# on Solaris.
++	.byte 0x47
++	.byte 0x4e
++	.byte 0x55
++	.byte 0
++1:
++	.p2align 3
++	.long 0xc0000002
++	.long 3f - 2f
++2:
++	.long 3
++3:
++	.p2align 3
++4:
+ 
+ .section .note.GNU-stack,"",%progbits
+diff --git a/lib/accelerated/x86/elf/sha256-ssse3-x86.s b/lib/accelerated/x86/elf/sha256-ssse3-x86.s
+index 8d9aaa4a8..6d16b9140 100644
+--- a/lib/accelerated/x86/elf/sha256-ssse3-x86.s
++++ b/lib/accelerated/x86/elf/sha256-ssse3-x86.s
+@@ -43,6 +43,7 @@
+ .align	16
+ sha256_block_data_order:
+ .L_sha256_block_data_order_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -3384,4 +3385,21 @@ sha256_block_data_order:
+ 	ret
+ .size	sha256_block_data_order,.-.L_sha256_block_data_order_begin
+ 
++	.section ".note.gnu.property", "a"
++	.p2align 2
++	.long 1f - 0f
++	.long 4f - 1f
++	.long 5
++0:
++	.asciz "GNU"
++1:
++	.p2align 2
++	.long 0xc0000002
++	.long 3f - 2f
++2:
++	.long 3
++3:
++	.p2align 2
++4:
++
+ .section .note.GNU-stack,"",%progbits
+diff --git a/lib/accelerated/x86/elf/sha256-ssse3-x86_64.s b/lib/accelerated/x86/elf/sha256-ssse3-x86_64.s
+index 4b08e0c85..1514ee45c 100644
+--- a/lib/accelerated/x86/elf/sha256-ssse3-x86_64.s
++++ b/lib/accelerated/x86/elf/sha256-ssse3-x86_64.s
+@@ -1814,6 +1814,7 @@ K256:
+ .align	64
+ sha256_block_data_order_shaext:
+ _shaext_shortcut:
++.cfi_startproc	
+ 	leaq	K256+128(%rip),%rcx
+ 	movdqu	(%rdi),%xmm1
+ 	movdqu	16(%rdi),%xmm2
+@@ -2016,6 +2017,7 @@ _shaext_shortcut:
+ 	movdqu	%xmm1,(%rdi)
+ 	movdqu	%xmm2,16(%rdi)
+ 	.byte	0xf3,0xc3
++.cfi_endproc	
+ .size	sha256_block_data_order_shaext,.-sha256_block_data_order_shaext
+ .type	sha256_block_data_order_ssse3,@function
+ .align	64
+@@ -4277,7 +4279,15 @@ sha256_block_data_order_avx2:
+ 	vmovdqa	%ymm4,0(%rsp)
+ 	xorl	%r14d,%r14d
+ 	vmovdqa	%ymm5,32(%rsp)
++
++	movq	88(%rsp),%rdi
++.cfi_def_cfa	%rdi,8
+ 	leaq	-64(%rsp),%rsp
++
++
++
++	movq	%rdi,-8(%rsp)
++.cfi_escape	0x0f,0x05,0x77,0x78,0x06,0x23,0x08
+ 	movl	%ebx,%edi
+ 	vmovdqa	%ymm6,0(%rsp)
+ 	xorl	%ecx,%edi
+@@ -4289,6 +4299,12 @@ sha256_block_data_order_avx2:
+ .align	16
+ .Lavx2_00_47:
+ 	leaq	-64(%rsp),%rsp
++.cfi_escape	0x0f,0x05,0x77,0x38,0x06,0x23,0x08
++
++	pushq	64-8(%rsp)
++.cfi_escape	0x0f,0x05,0x77,0x00,0x06,0x23,0x08
++	leaq	8(%rsp),%rsp
++.cfi_escape	0x0f,0x05,0x77,0x78,0x06,0x23,0x08
+ 	vpalignr	$4,%ymm0,%ymm1,%ymm4
+ 	addl	0+128(%rsp),%r11d
+ 	andl	%r8d,%r12d
+@@ -4544,6 +4560,12 @@ sha256_block_data_order_avx2:
+ 	movl	%r9d,%r12d
+ 	vmovdqa	%ymm6,32(%rsp)
+ 	leaq	-64(%rsp),%rsp
++.cfi_escape	0x0f,0x05,0x77,0x38,0x06,0x23,0x08
++
++	pushq	64-8(%rsp)
++.cfi_escape	0x0f,0x05,0x77,0x00,0x06,0x23,0x08
++	leaq	8(%rsp),%rsp
++.cfi_escape	0x0f,0x05,0x77,0x78,0x06,0x23,0x08
+ 	vpalignr	$4,%ymm2,%ymm3,%ymm4
+ 	addl	0+128(%rsp),%r11d
+ 	andl	%r8d,%r12d
+@@ -5419,6 +5441,8 @@ sha256_block_data_order_avx2:
+ 
+ 	leaq	448(%rsp),%rsp
+ 
++.cfi_escape	0x0f,0x06,0x77,0xd8,0x00,0x06,0x23,0x08
++
+ 	addl	0(%rdi),%eax
+ 	addl	4(%rdi),%ebx
+ 	addl	8(%rdi),%ecx
+@@ -5444,9 +5468,11 @@ sha256_block_data_order_avx2:
+ 	jbe	.Loop_avx2
+ 	leaq	(%rsp),%rbp
+ 
++
++.cfi_escape	0x0f,0x06,0x76,0xd8,0x00,0x06,0x23,0x08
++
+ .Ldone_avx2:
+-	leaq	(%rbp),%rsp
+-	movq	88(%rsp),%rsi
++	movq	88(%rbp),%rsi
+ .cfi_def_cfa	%rsi,8
+ 	vzeroupper
+ 	movq	-48(%rsi),%r15
+@@ -5467,5 +5493,26 @@ sha256_block_data_order_avx2:
+ 	.byte	0xf3,0xc3
+ .cfi_endproc	
+ .size	sha256_block_data_order_avx2,.-sha256_block_data_order_avx2
++	.section ".note.gnu.property", "a"
++	.p2align 3
++	.long 1f - 0f
++	.long 4f - 1f
++	.long 5
++0:
++	# "GNU" encoded with .byte, since .asciz isn't supported
++	# on Solaris.
++	.byte 0x47
++	.byte 0x4e
++	.byte 0x55
++	.byte 0
++1:
++	.p2align 3
++	.long 0xc0000002
++	.long 3f - 2f
++2:
++	.long 3
++3:
++	.p2align 3
++4:
+ 
+ .section .note.GNU-stack,"",%progbits
+diff --git a/lib/accelerated/x86/elf/sha512-ssse3-x86.s b/lib/accelerated/x86/elf/sha512-ssse3-x86.s
+index 481c77715..afca4eae7 100644
+--- a/lib/accelerated/x86/elf/sha512-ssse3-x86.s
++++ b/lib/accelerated/x86/elf/sha512-ssse3-x86.s
+@@ -43,6 +43,7 @@
+ .align	16
+ sha512_block_data_order:
+ .L_sha512_block_data_order_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -602,4 +603,21 @@ sha512_block_data_order:
+ .byte	112,112,114,111,64,111,112,101,110,115,115,108,46,111,114,103
+ .byte	62,0
+ 
++	.section ".note.gnu.property", "a"
++	.p2align 2
++	.long 1f - 0f
++	.long 4f - 1f
++	.long 5
++0:
++	.asciz "GNU"
++1:
++	.p2align 2
++	.long 0xc0000002
++	.long 3f - 2f
++2:
++	.long 3
++3:
++	.p2align 2
++4:
++
+ .section .note.GNU-stack,"",%progbits
+diff --git a/lib/accelerated/x86/elf/sha512-ssse3-x86_64.s b/lib/accelerated/x86/elf/sha512-ssse3-x86_64.s
+index e384d7e9e..a7be2cd44 100644
+--- a/lib/accelerated/x86/elf/sha512-ssse3-x86_64.s
++++ b/lib/accelerated/x86/elf/sha512-ssse3-x86_64.s
+@@ -4204,7 +4204,15 @@ sha512_block_data_order_avx2:
+ 	vmovdqa	%ymm10,64(%rsp)
+ 	vpaddq	64(%rbp),%ymm6,%ymm10
+ 	vmovdqa	%ymm11,96(%rsp)
++
++	movq	152(%rsp),%rdi
++.cfi_def_cfa	%rdi,8
+ 	leaq	-128(%rsp),%rsp
++
++
++
++	movq	%rdi,-8(%rsp)
++.cfi_escape	0x0f,0x05,0x77,0x78,0x06,0x23,0x08
+ 	vpaddq	96(%rbp),%ymm7,%ymm11
+ 	vmovdqa	%ymm8,0(%rsp)
+ 	xorq	%r14,%r14
+@@ -4220,6 +4228,12 @@ sha512_block_data_order_avx2:
+ .align	16
+ .Lavx2_00_47:
+ 	leaq	-128(%rsp),%rsp
++.cfi_escape	0x0f,0x06,0x77,0xf8,0x00,0x06,0x23,0x08
++
++	pushq	128-8(%rsp)
++.cfi_escape	0x0f,0x05,0x77,0x00,0x06,0x23,0x08
++	leaq	8(%rsp),%rsp
++.cfi_escape	0x0f,0x05,0x77,0x78,0x06,0x23,0x08
+ 	vpalignr	$8,%ymm0,%ymm1,%ymm8
+ 	addq	0+256(%rsp),%r11
+ 	andq	%r8,%r12
+@@ -4513,6 +4527,12 @@ sha512_block_data_order_avx2:
+ 	movq	%r9,%r12
+ 	vmovdqa	%ymm10,96(%rsp)
+ 	leaq	-128(%rsp),%rsp
++.cfi_escape	0x0f,0x06,0x77,0xf8,0x00,0x06,0x23,0x08
++
++	pushq	128-8(%rsp)
++.cfi_escape	0x0f,0x05,0x77,0x00,0x06,0x23,0x08
++	leaq	8(%rsp),%rsp
++.cfi_escape	0x0f,0x05,0x77,0x78,0x06,0x23,0x08
+ 	vpalignr	$8,%ymm4,%ymm5,%ymm8
+ 	addq	0+256(%rsp),%r11
+ 	andq	%r8,%r12
+@@ -5426,6 +5446,8 @@ sha512_block_data_order_avx2:
+ 
+ 	leaq	1152(%rsp),%rsp
+ 
++.cfi_escape	0x0f,0x06,0x77,0x98,0x01,0x06,0x23,0x08
++
+ 	addq	0(%rdi),%rax
+ 	addq	8(%rdi),%rbx
+ 	addq	16(%rdi),%rcx
+@@ -5451,9 +5473,11 @@ sha512_block_data_order_avx2:
+ 	jbe	.Loop_avx2
+ 	leaq	(%rsp),%rbp
+ 
++
++.cfi_escape	0x0f,0x06,0x76,0x98,0x01,0x06,0x23,0x08
++
+ .Ldone_avx2:
+-	leaq	(%rbp),%rsp
+-	movq	152(%rsp),%rsi
++	movq	152(%rbp),%rsi
+ .cfi_def_cfa	%rsi,8
+ 	vzeroupper
+ 	movq	-48(%rsi),%r15
+@@ -5474,5 +5498,26 @@ sha512_block_data_order_avx2:
+ 	.byte	0xf3,0xc3
+ .cfi_endproc	
+ .size	sha512_block_data_order_avx2,.-sha512_block_data_order_avx2
++	.section ".note.gnu.property", "a"
++	.p2align 3
++	.long 1f - 0f
++	.long 4f - 1f
++	.long 5
++0:
++	# "GNU" encoded with .byte, since .asciz isn't supported
++	# on Solaris.
++	.byte 0x47
++	.byte 0x4e
++	.byte 0x55
++	.byte 0
++1:
++	.p2align 3
++	.long 0xc0000002
++	.long 3f - 2f
++2:
++	.long 3
++3:
++	.p2align 3
++4:
+ 
+ .section .note.GNU-stack,"",%progbits
+diff --git a/lib/accelerated/x86/macosx/aes-ssse3-x86.s b/lib/accelerated/x86/macosx/aes-ssse3-x86.s
+index 4be899281..6cc2b0390 100644
+--- a/lib/accelerated/x86/macosx/aes-ssse3-x86.s
++++ b/lib/accelerated/x86/macosx/aes-ssse3-x86.s
+@@ -70,12 +70,14 @@ L_vpaes_consts:
+ .align	6,0x90
+ .align	4
+ __vpaes_preheat:
++.byte	243,15,30,251
+ 	addl	(%esp),%ebp
+ 	movdqa	-48(%ebp),%xmm7
+ 	movdqa	-16(%ebp),%xmm6
+ 	ret
+ .align	4
+ __vpaes_encrypt_core:
++.byte	243,15,30,251
+ 	movl	$16,%ecx
+ 	movl	240(%edx),%eax
+ 	movdqa	%xmm6,%xmm1
+@@ -151,6 +153,7 @@ L000enc_entry:
+ 	ret
+ .align	4
+ __vpaes_decrypt_core:
++.byte	243,15,30,251
+ 	leal	608(%ebp),%ebx
+ 	movl	240(%edx),%eax
+ 	movdqa	%xmm6,%xmm1
+@@ -237,6 +240,7 @@ L002dec_entry:
+ 	ret
+ .align	4
+ __vpaes_schedule_core:
++.byte	243,15,30,251
+ 	addl	(%esp),%ebp
+ 	movdqu	(%esi),%xmm0
+ 	movdqa	320(%ebp),%xmm2
+@@ -329,6 +333,7 @@ L013schedule_mangle_last_dec:
+ 	ret
+ .align	4
+ __vpaes_schedule_192_smear:
++.byte	243,15,30,251
+ 	pshufd	$128,%xmm6,%xmm1
+ 	pshufd	$254,%xmm7,%xmm0
+ 	pxor	%xmm1,%xmm6
+@@ -339,6 +344,7 @@ __vpaes_schedule_192_smear:
+ 	ret
+ .align	4
+ __vpaes_schedule_round:
++.byte	243,15,30,251
+ 	movdqa	8(%esp),%xmm2
+ 	pxor	%xmm1,%xmm1
+ .byte	102,15,58,15,202,15
+@@ -386,6 +392,7 @@ L_vpaes_schedule_low_round:
+ 	ret
+ .align	4
+ __vpaes_schedule_transform:
++.byte	243,15,30,251
+ 	movdqa	-16(%ebp),%xmm2
+ 	movdqa	%xmm2,%xmm1
+ 	pandn	%xmm0,%xmm1
+@@ -399,6 +406,7 @@ __vpaes_schedule_transform:
+ 	ret
+ .align	4
+ __vpaes_schedule_mangle:
++.byte	243,15,30,251
+ 	movdqa	%xmm0,%xmm4
+ 	movdqa	128(%ebp),%xmm5
+ 	testl	%edi,%edi
+@@ -458,6 +466,7 @@ L015schedule_mangle_both:
+ .align	4
+ _vpaes_set_encrypt_key:
+ L_vpaes_set_encrypt_key_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -489,6 +498,7 @@ L016pic_point:
+ .align	4
+ _vpaes_set_decrypt_key:
+ L_vpaes_set_decrypt_key_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -525,6 +535,7 @@ L017pic_point:
+ .align	4
+ _vpaes_encrypt:
+ L_vpaes_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -552,6 +563,7 @@ L018pic_point:
+ .align	4
+ _vpaes_decrypt:
+ L_vpaes_decrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -579,6 +591,7 @@ L019pic_point:
+ .align	4
+ _vpaes_cbc_encrypt:
+ L_vpaes_cbc_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+diff --git a/lib/accelerated/x86/macosx/aes-ssse3-x86_64.s b/lib/accelerated/x86/macosx/aes-ssse3-x86_64.s
+index 3d5c65226..c2e2f2e02 100644
+--- a/lib/accelerated/x86/macosx/aes-ssse3-x86_64.s
++++ b/lib/accelerated/x86/macosx/aes-ssse3-x86_64.s
+@@ -635,6 +635,7 @@ L$schedule_mangle_both:
+ .p2align	4
+ _vpaes_set_encrypt_key:
+ 
++.byte	243,15,30,250
+ 	movl	%esi,%eax
+ 	shrl	$5,%eax
+ 	addl	$5,%eax
+@@ -653,6 +654,7 @@ _vpaes_set_encrypt_key:
+ .p2align	4
+ _vpaes_set_decrypt_key:
+ 
++.byte	243,15,30,250
+ 	movl	%esi,%eax
+ 	shrl	$5,%eax
+ 	addl	$5,%eax
+@@ -676,6 +678,7 @@ _vpaes_set_decrypt_key:
+ .p2align	4
+ _vpaes_encrypt:
+ 
++.byte	243,15,30,250
+ 	movdqu	(%rdi),%xmm0
+ 	call	_vpaes_preheat
+ 	call	_vpaes_encrypt_core
+@@ -689,6 +692,7 @@ _vpaes_encrypt:
+ .p2align	4
+ _vpaes_decrypt:
+ 
++.byte	243,15,30,250
+ 	movdqu	(%rdi),%xmm0
+ 	call	_vpaes_preheat
+ 	call	_vpaes_decrypt_core
+@@ -701,6 +705,7 @@ _vpaes_decrypt:
+ .p2align	4
+ _vpaes_cbc_encrypt:
+ 
++.byte	243,15,30,250
+ 	xchgq	%rcx,%rdx
+ 	subq	$16,%rcx
+ 	jc	L$cbc_abort
+diff --git a/lib/accelerated/x86/macosx/aesni-gcm-x86_64.s b/lib/accelerated/x86/macosx/aesni-gcm-x86_64.s
+index d540930b5..be6d885d8 100644
+--- a/lib/accelerated/x86/macosx/aesni-gcm-x86_64.s
++++ b/lib/accelerated/x86/macosx/aesni-gcm-x86_64.s
+@@ -42,6 +42,8 @@
+ 
+ .p2align	5
+ _aesni_ctr32_ghash_6x:
++
++.byte	243,15,30,250
+ 	vmovdqu	32(%r11),%xmm2
+ 	subq	$6,%rdx
+ 	vpxor	%xmm4,%xmm4,%xmm4
+@@ -350,11 +352,13 @@ L$6x_done:
+ 
+ 	.byte	0xf3,0xc3
+ 
++
+ .globl	_aesni_gcm_decrypt
+ 
+ .p2align	5
+ _aesni_gcm_decrypt:
+ 
++.byte	243,15,30,250
+ 	xorq	%r10,%r10
+ 	cmpq	$0x60,%rdx
+ 	jb	L$gcm_dec_abort
+@@ -455,6 +459,8 @@ L$gcm_dec_abort:
+ 
+ .p2align	5
+ _aesni_ctr32_6x:
++
++.byte	243,15,30,250
+ 	vmovdqu	0-128(%rcx),%xmm4
+ 	vmovdqu	32(%r11),%xmm2
+ 	leaq	-1(%rbp),%r13
+@@ -543,11 +549,13 @@ L$handle_ctr32_2:
+ 	jmp	L$oop_ctr32
+ 
+ 
++
+ .globl	_aesni_gcm_encrypt
+ 
+ .p2align	5
+ _aesni_gcm_encrypt:
+ 
++.byte	243,15,30,250
+ 	xorq	%r10,%r10
+ 	cmpq	$288,%rdx
+ 	jb	L$gcm_enc_abort
+diff --git a/lib/accelerated/x86/macosx/aesni-x86.s b/lib/accelerated/x86/macosx/aesni-x86.s
+index ee5008914..64e4e52fc 100644
+--- a/lib/accelerated/x86/macosx/aesni-x86.s
++++ b/lib/accelerated/x86/macosx/aesni-x86.s
+@@ -42,6 +42,7 @@
+ .align	4
+ _aesni_encrypt:
+ L_aesni_encrypt_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%eax
+ 	movl	12(%esp),%edx
+ 	movups	(%eax),%xmm2
+@@ -67,6 +68,7 @@ L000enc1_loop_1:
+ .align	4
+ _aesni_decrypt:
+ L_aesni_decrypt_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%eax
+ 	movl	12(%esp),%edx
+ 	movups	(%eax),%xmm2
+@@ -90,6 +92,7 @@ L001dec1_loop_2:
+ 	ret
+ .align	4
+ __aesni_encrypt2:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -115,6 +118,7 @@ L002enc2_loop:
+ 	ret
+ .align	4
+ __aesni_decrypt2:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -140,6 +144,7 @@ L003dec2_loop:
+ 	ret
+ .align	4
+ __aesni_encrypt3:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -170,6 +175,7 @@ L004enc3_loop:
+ 	ret
+ .align	4
+ __aesni_decrypt3:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -200,6 +206,7 @@ L005dec3_loop:
+ 	ret
+ .align	4
+ __aesni_encrypt4:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	movups	16(%edx),%xmm1
+ 	shll	$4,%ecx
+@@ -236,6 +243,7 @@ L006enc4_loop:
+ 	ret
+ .align	4
+ __aesni_decrypt4:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	movups	16(%edx),%xmm1
+ 	shll	$4,%ecx
+@@ -272,6 +280,7 @@ L007dec4_loop:
+ 	ret
+ .align	4
+ __aesni_encrypt6:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -324,6 +333,7 @@ L_aesni_encrypt6_enter:
+ 	ret
+ .align	4
+ __aesni_decrypt6:
++.byte	243,15,30,251
+ 	movups	(%edx),%xmm0
+ 	shll	$4,%ecx
+ 	movups	16(%edx),%xmm1
+@@ -378,6 +388,7 @@ L_aesni_decrypt6_enter:
+ .align	4
+ _aesni_ecb_encrypt:
+ L_aesni_ecb_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -611,6 +622,7 @@ L012ecb_ret:
+ .align	4
+ _aesni_ccm64_encrypt_blocks:
+ L_aesni_ccm64_encrypt_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -697,6 +709,7 @@ L031ccm64_enc2_loop:
+ .align	4
+ _aesni_ccm64_decrypt_blocks:
+ L_aesni_ccm64_decrypt_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -818,6 +831,7 @@ L036enc1_loop_6:
+ .align	4
+ _aesni_ctr32_encrypt_blocks:
+ L_aesni_ctr32_encrypt_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -1054,6 +1068,7 @@ L040ctr32_ret:
+ .align	4
+ _aesni_xts_encrypt:
+ L_aesni_xts_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -1412,6 +1427,7 @@ L056xts_enc_ret:
+ .align	4
+ _aesni_xts_decrypt:
+ L_aesni_xts_decrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -1800,6 +1816,7 @@ L069xts_dec_ret:
+ .align	4
+ _aesni_ocb_encrypt:
+ L_aesni_ocb_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -2193,6 +2210,7 @@ L078done:
+ .align	4
+ _aesni_ocb_decrypt:
+ L_aesni_ocb_decrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -2586,6 +2604,7 @@ L088done:
+ .align	4
+ _aesni_cbc_encrypt:
+ L_aesni_cbc_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -2843,6 +2862,7 @@ L094cbc_abort:
+ 	ret
+ .align	4
+ __aesni_set_encrypt_key:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	testl	%eax,%eax
+@@ -3176,6 +3196,7 @@ L115bad_keybits:
+ .align	4
+ _aesni_set_encrypt_key:
+ L_aesni_set_encrypt_key_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%eax
+ 	movl	8(%esp),%ecx
+ 	movl	12(%esp),%edx
+@@ -3185,6 +3206,7 @@ L_aesni_set_encrypt_key_begin:
+ .align	4
+ _aesni_set_decrypt_key:
+ L_aesni_set_decrypt_key_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%eax
+ 	movl	8(%esp),%ecx
+ 	movl	12(%esp),%edx
+diff --git a/lib/accelerated/x86/macosx/aesni-x86_64.s b/lib/accelerated/x86/macosx/aesni-x86_64.s
+index f6145f166..484122c5e 100644
+--- a/lib/accelerated/x86/macosx/aesni-x86_64.s
++++ b/lib/accelerated/x86/macosx/aesni-x86_64.s
+@@ -44,6 +44,7 @@
+ .p2align	4
+ _aesni_encrypt:
+ 
++.byte	243,15,30,250
+ 	movups	(%rdi),%xmm2
+ 	movl	240(%rdx),%eax
+ 	movups	(%rdx),%xmm0
+@@ -70,6 +71,7 @@ L$oop_enc1_1:
+ .p2align	4
+ _aesni_decrypt:
+ 
++.byte	243,15,30,250
+ 	movups	(%rdi),%xmm2
+ 	movl	240(%rdx),%eax
+ 	movups	(%rdx),%xmm0
+@@ -557,6 +559,7 @@ L$dec_loop8_enter:
+ .p2align	4
+ _aesni_ecb_encrypt:
+ 
++.byte	243,15,30,250
+ 	andq	$-16,%rdx
+ 	jz	L$ecb_ret
+ 
+@@ -900,6 +903,8 @@ L$ecb_ret:
+ 
+ .p2align	4
+ _aesni_ccm64_encrypt_blocks:
++
++.byte	243,15,30,250
+ 	movl	240(%rcx),%eax
+ 	movdqu	(%r8),%xmm6
+ 	movdqa	L$increment64(%rip),%xmm9
+@@ -959,10 +964,13 @@ L$ccm64_enc2_loop:
+ 	pxor	%xmm6,%xmm6
+ 	.byte	0xf3,0xc3
+ 
++
+ .globl	_aesni_ccm64_decrypt_blocks
+ 
+ .p2align	4
+ _aesni_ccm64_decrypt_blocks:
++
++.byte	243,15,30,250
+ 	movl	240(%rcx),%eax
+ 	movups	(%r8),%xmm6
+ 	movdqu	(%r9),%xmm3
+@@ -1056,11 +1064,13 @@ L$oop_enc1_6:
+ 	pxor	%xmm6,%xmm6
+ 	.byte	0xf3,0xc3
+ 
++
+ .globl	_aesni_ctr32_encrypt_blocks
+ 
+ .p2align	4
+ _aesni_ctr32_encrypt_blocks:
+ 
++.byte	243,15,30,250
+ 	cmpq	$1,%rdx
+ 	jne	L$ctr32_bulk
+ 
+@@ -1639,6 +1649,7 @@ L$ctr32_epilogue:
+ .p2align	4
+ _aesni_xts_encrypt:
+ 
++.byte	243,15,30,250
+ 	leaq	(%rsp),%r11
+ 
+ 	pushq	%rbp
+@@ -2109,6 +2120,7 @@ L$xts_enc_epilogue:
+ .p2align	4
+ _aesni_xts_decrypt:
+ 
++.byte	243,15,30,250
+ 	leaq	(%rsp),%r11
+ 
+ 	pushq	%rbp
+@@ -2616,6 +2628,7 @@ L$xts_dec_epilogue:
+ .p2align	5
+ _aesni_ocb_encrypt:
+ 
++.byte	243,15,30,250
+ 	leaq	(%rsp),%rax
+ 	pushq	%rbx
+ 
+@@ -2824,6 +2837,7 @@ L$ocb_enc_epilogue:
+ 
+ .p2align	5
+ __ocb_encrypt6:
++
+ 	pxor	%xmm9,%xmm15
+ 	movdqu	(%rbx,%r12,1),%xmm11
+ 	movdqa	%xmm10,%xmm12
+@@ -2924,8 +2938,10 @@ L$ocb_enc_loop6:
+ 
+ 
+ 
++
+ .p2align	5
+ __ocb_encrypt4:
++
+ 	pxor	%xmm9,%xmm15
+ 	movdqu	(%rbx,%r12,1),%xmm11
+ 	movdqa	%xmm10,%xmm12
+@@ -2993,8 +3009,10 @@ L$ocb_enc_loop4:
+ 
+ 
+ 
++
+ .p2align	5
+ __ocb_encrypt1:
++
+ 	pxor	%xmm15,%xmm7
+ 	pxor	%xmm9,%xmm7
+ 	pxor	%xmm2,%xmm8
+@@ -3027,11 +3045,13 @@ L$ocb_enc_loop1:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	_aesni_ocb_decrypt
+ 
+ .p2align	5
+ _aesni_ocb_decrypt:
+ 
++.byte	243,15,30,250
+ 	leaq	(%rsp),%rax
+ 	pushq	%rbx
+ 
+@@ -3262,6 +3282,7 @@ L$ocb_dec_epilogue:
+ 
+ .p2align	5
+ __ocb_decrypt6:
++
+ 	pxor	%xmm9,%xmm15
+ 	movdqu	(%rbx,%r12,1),%xmm11
+ 	movdqa	%xmm10,%xmm12
+@@ -3356,8 +3377,10 @@ L$ocb_dec_loop6:
+ 
+ 
+ 
++
+ .p2align	5
+ __ocb_decrypt4:
++
+ 	pxor	%xmm9,%xmm15
+ 	movdqu	(%rbx,%r12,1),%xmm11
+ 	movdqa	%xmm10,%xmm12
+@@ -3421,8 +3444,10 @@ L$ocb_dec_loop4:
+ 
+ 
+ 
++
+ .p2align	5
+ __ocb_decrypt1:
++
+ 	pxor	%xmm15,%xmm7
+ 	pxor	%xmm9,%xmm7
+ 	pxor	%xmm7,%xmm2
+@@ -3453,11 +3478,13 @@ L$ocb_dec_loop1:
+ .byte	102,15,56,223,215
+ 	.byte	0xf3,0xc3
+ 
++
+ .globl	_aesni_cbc_encrypt
+ 
+ .p2align	4
+ _aesni_cbc_encrypt:
+ 
++.byte	243,15,30,250
+ 	testq	%rdx,%rdx
+ 	jz	L$cbc_ret
+ 
+@@ -4390,7 +4417,6 @@ L$enc_key_ret:
+ 	addq	$8,%rsp
+ 
+ 	.byte	0xf3,0xc3
+-
+ L$SEH_end_set_encrypt_key:
+ 
+ .p2align	4
+@@ -4463,6 +4489,7 @@ L$key_expansion_256b:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .p2align	6
+ L$bswap_mask:
+ .byte	15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0
+diff --git a/lib/accelerated/x86/macosx/e_padlock-x86.s b/lib/accelerated/x86/macosx/e_padlock-x86.s
+index 367962c7c..9a72938fe 100644
+--- a/lib/accelerated/x86/macosx/e_padlock-x86.s
++++ b/lib/accelerated/x86/macosx/e_padlock-x86.s
+@@ -1,4 +1,4 @@
+-# Copyright (c) 2011-2013, Andy Polyakov <appro@openssl.org>
++# Copyright (c) 2011-2016, Andy Polyakov <appro@openssl.org>
+ # All rights reserved.
+ #
+ # Redistribution and use in source and binary forms, with or without
+@@ -37,12 +37,12 @@
+ #
+ # *** This file is auto-generated ***
+ #
+-.file	"devel/perlasm/e_padlock-x86.s"
+ .text
+ .globl	_padlock_capability
+ .align	4
+ _padlock_capability:
+ L_padlock_capability_begin:
++.byte	243,15,30,251
+ 	pushl	%ebx
+ 	pushfl
+ 	popl	%eax
+@@ -59,11 +59,20 @@ L_padlock_capability_begin:
+ 	.byte	0x0f,0xa2
+ 	xorl	%eax,%eax
+ 	cmpl	$0x746e6543,%ebx
+-	jne	L000noluck
++	jne	L001zhaoxin
+ 	cmpl	$0x48727561,%edx
+ 	jne	L000noluck
+ 	cmpl	$0x736c7561,%ecx
+ 	jne	L000noluck
++	jmp	L002zhaoxinEnd
++L001zhaoxin:
++	cmpl	$0x68532020,%ebx
++	jne	L000noluck
++	cmpl	$0x68676e61,%edx
++	jne	L000noluck
++	cmpl	$0x20206961,%ecx
++	jne	L000noluck
++L002zhaoxinEnd:
+ 	movl	$3221225472,%eax
+ 	.byte	0x0f,0xa2
+ 	movl	%eax,%edx
+@@ -92,43 +101,47 @@ L000noluck:
+ .align	4
+ _padlock_key_bswap:
+ L_padlock_key_bswap_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%edx
+ 	movl	240(%edx),%ecx
+-L001bswap_loop:
++L003bswap_loop:
+ 	movl	(%edx),%eax
+ 	bswap	%eax
+ 	movl	%eax,(%edx)
+ 	leal	4(%edx),%edx
+ 	subl	$1,%ecx
+-	jnz	L001bswap_loop
++	jnz	L003bswap_loop
+ 	ret
+ .globl	_padlock_verify_context
+ .align	4
+ _padlock_verify_context:
+ L_padlock_verify_context_begin:
++.byte	243,15,30,251
+ 	movl	4(%esp),%edx
+-	leal	Lpadlock_saved_context-L002verify_pic_point,%eax
++	leal	Lpadlock_saved_context-L004verify_pic_point,%eax
+ 	pushfl
+ 	call	__padlock_verify_ctx
+-L002verify_pic_point:
++L004verify_pic_point:
+ 	leal	4(%esp),%esp
+ 	ret
+ .align	4
+ __padlock_verify_ctx:
++.byte	243,15,30,251
+ 	addl	(%esp),%eax
+ 	btl	$30,4(%esp)
+-	jnc	L003verified
++	jnc	L005verified
+ 	cmpl	(%eax),%edx
+-	je	L003verified
++	je	L005verified
+ 	pushfl
+ 	popfl
+-L003verified:
++L005verified:
+ 	movl	%edx,(%eax)
+ 	ret
+ .globl	_padlock_reload_key
+ .align	4
+ _padlock_reload_key:
+ L_padlock_reload_key_begin:
++.byte	243,15,30,251
+ 	pushfl
+ 	popfl
+ 	ret
+@@ -136,6 +149,7 @@ L_padlock_reload_key_begin:
+ .align	4
+ _padlock_aes_block:
+ L_padlock_aes_block_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	pushl	%ebx
+@@ -154,6 +168,7 @@ L_padlock_aes_block_begin:
+ .align	4
+ _padlock_ecb_encrypt:
+ L_padlock_ecb_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -163,25 +178,25 @@ L_padlock_ecb_encrypt_begin:
+ 	movl	28(%esp),%edx
+ 	movl	32(%esp),%ecx
+ 	testl	$15,%edx
+-	jnz	L004ecb_abort
++	jnz	L006ecb_abort
+ 	testl	$15,%ecx
+-	jnz	L004ecb_abort
+-	leal	Lpadlock_saved_context-L005ecb_pic_point,%eax
++	jnz	L006ecb_abort
++	leal	Lpadlock_saved_context-L007ecb_pic_point,%eax
+ 	pushfl
+ 	cld
+ 	call	__padlock_verify_ctx
+-L005ecb_pic_point:
++L007ecb_pic_point:
+ 	leal	16(%edx),%edx
+ 	xorl	%eax,%eax
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%edx)
+-	jnz	L006ecb_aligned
++	jnz	L008ecb_aligned
+ 	testl	$15,%edi
+ 	setz	%al
+ 	testl	$15,%esi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+-	jnz	L006ecb_aligned
++	jnz	L008ecb_aligned
+ 	negl	%eax
+ 	movl	$512,%ebx
+ 	notl	%eax
+@@ -200,7 +215,7 @@ L005ecb_pic_point:
+ 	andl	$-16,%esp
+ 	movl	%eax,16(%ebp)
+ 	cmpl	%ebx,%ecx
+-	ja	L007ecb_loop
++	ja	L009ecb_loop
+ 	movl	%esi,%eax
+ 	cmpl	%esp,%ebp
+ 	cmovel	%edi,%eax
+@@ -211,10 +226,10 @@ L005ecb_pic_point:
+ 	movl	$-128,%eax
+ 	cmovael	%ebx,%eax
+ 	andl	%eax,%ebx
+-	jz	L008ecb_unaligned_tail
+-	jmp	L007ecb_loop
++	jz	L010ecb_unaligned_tail
++	jmp	L009ecb_loop
+ .align	4,0x90
+-L007ecb_loop:
++L009ecb_loop:
+ 	movl	%edi,(%ebp)
+ 	movl	%esi,4(%ebp)
+ 	movl	%ecx,8(%ebp)
+@@ -223,13 +238,13 @@ L007ecb_loop:
+ 	testl	$15,%edi
+ 	cmovnzl	%esp,%edi
+ 	testl	$15,%esi
+-	jz	L009ecb_inp_aligned
++	jz	L011ecb_inp_aligned
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+ 	movl	%ebx,%ecx
+ 	movl	%edi,%esi
+-L009ecb_inp_aligned:
++L011ecb_inp_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+@@ -237,23 +252,23 @@ L009ecb_inp_aligned:
+ 	movl	(%ebp),%edi
+ 	movl	12(%ebp),%ebx
+ 	testl	$15,%edi
+-	jz	L010ecb_out_aligned
++	jz	L012ecb_out_aligned
+ 	movl	%ebx,%ecx
+ 	leal	(%esp),%esi
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+-L010ecb_out_aligned:
++L012ecb_out_aligned:
+ 	movl	4(%ebp),%esi
+ 	movl	8(%ebp),%ecx
+ 	addl	%ebx,%edi
+ 	addl	%ebx,%esi
+ 	subl	%ebx,%ecx
+ 	movl	$512,%ebx
+-	jz	L011ecb_break
++	jz	L013ecb_break
+ 	cmpl	%ebx,%ecx
+-	jae	L007ecb_loop
+-L008ecb_unaligned_tail:
++	jae	L009ecb_loop
++L010ecb_unaligned_tail:
+ 	xorl	%eax,%eax
+ 	cmpl	%ebp,%esp
+ 	cmovel	%ecx,%eax
+@@ -266,24 +281,24 @@ L008ecb_unaligned_tail:
+ 	movl	%esp,%esi
+ 	movl	%eax,%edi
+ 	movl	%ebx,%ecx
+-	jmp	L007ecb_loop
++	jmp	L009ecb_loop
+ .align	4,0x90
+-L011ecb_break:
++L013ecb_break:
+ 	cmpl	%ebp,%esp
+-	je	L012ecb_done
++	je	L014ecb_done
+ 	pxor	%xmm0,%xmm0
+ 	leal	(%esp),%eax
+-L013ecb_bzero:
++L015ecb_bzero:
+ 	movaps	%xmm0,(%eax)
+ 	leal	16(%eax),%eax
+ 	cmpl	%eax,%ebp
+-	ja	L013ecb_bzero
+-L012ecb_done:
++	ja	L015ecb_bzero
++L014ecb_done:
+ 	movl	16(%ebp),%ebp
+ 	leal	24(%ebp),%esp
+-	jmp	L014ecb_exit
++	jmp	L016ecb_exit
+ .align	4,0x90
+-L006ecb_aligned:
++L008ecb_aligned:
+ 	leal	(%esi,%ecx,1),%ebp
+ 	negl	%ebp
+ 	andl	$4095,%ebp
+@@ -293,14 +308,14 @@ L006ecb_aligned:
+ 	cmovael	%eax,%ebp
+ 	andl	%ecx,%ebp
+ 	subl	%ebp,%ecx
+-	jz	L015ecb_aligned_tail
++	jz	L017ecb_aligned_tail
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+ .byte	243,15,167,200
+ 	testl	%ebp,%ebp
+-	jz	L014ecb_exit
+-L015ecb_aligned_tail:
++	jz	L016ecb_exit
++L017ecb_aligned_tail:
+ 	movl	%ebp,%ecx
+ 	leal	-24(%esp),%ebp
+ 	movl	%ebp,%esp
+@@ -317,11 +332,11 @@ L015ecb_aligned_tail:
+ 	movl	%esp,%esi
+ 	movl	%eax,%edi
+ 	movl	%ebx,%ecx
+-	jmp	L007ecb_loop
+-L014ecb_exit:
++	jmp	L009ecb_loop
++L016ecb_exit:
+ 	movl	$1,%eax
+ 	leal	4(%esp),%esp
+-L004ecb_abort:
++L006ecb_abort:
+ 	popl	%edi
+ 	popl	%esi
+ 	popl	%ebx
+@@ -331,6 +346,7 @@ L004ecb_abort:
+ .align	4
+ _padlock_cbc_encrypt:
+ L_padlock_cbc_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -340,25 +356,25 @@ L_padlock_cbc_encrypt_begin:
+ 	movl	28(%esp),%edx
+ 	movl	32(%esp),%ecx
+ 	testl	$15,%edx
+-	jnz	L016cbc_abort
++	jnz	L018cbc_abort
+ 	testl	$15,%ecx
+-	jnz	L016cbc_abort
+-	leal	Lpadlock_saved_context-L017cbc_pic_point,%eax
++	jnz	L018cbc_abort
++	leal	Lpadlock_saved_context-L019cbc_pic_point,%eax
+ 	pushfl
+ 	cld
+ 	call	__padlock_verify_ctx
+-L017cbc_pic_point:
++L019cbc_pic_point:
+ 	leal	16(%edx),%edx
+ 	xorl	%eax,%eax
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%edx)
+-	jnz	L018cbc_aligned
++	jnz	L020cbc_aligned
+ 	testl	$15,%edi
+ 	setz	%al
+ 	testl	$15,%esi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+-	jnz	L018cbc_aligned
++	jnz	L020cbc_aligned
+ 	negl	%eax
+ 	movl	$512,%ebx
+ 	notl	%eax
+@@ -377,7 +393,7 @@ L017cbc_pic_point:
+ 	andl	$-16,%esp
+ 	movl	%eax,16(%ebp)
+ 	cmpl	%ebx,%ecx
+-	ja	L019cbc_loop
++	ja	L021cbc_loop
+ 	movl	%esi,%eax
+ 	cmpl	%esp,%ebp
+ 	cmovel	%edi,%eax
+@@ -388,10 +404,10 @@ L017cbc_pic_point:
+ 	movl	$-64,%eax
+ 	cmovael	%ebx,%eax
+ 	andl	%eax,%ebx
+-	jz	L020cbc_unaligned_tail
+-	jmp	L019cbc_loop
++	jz	L022cbc_unaligned_tail
++	jmp	L021cbc_loop
+ .align	4,0x90
+-L019cbc_loop:
++L021cbc_loop:
+ 	movl	%edi,(%ebp)
+ 	movl	%esi,4(%ebp)
+ 	movl	%ecx,8(%ebp)
+@@ -400,13 +416,13 @@ L019cbc_loop:
+ 	testl	$15,%edi
+ 	cmovnzl	%esp,%edi
+ 	testl	$15,%esi
+-	jz	L021cbc_inp_aligned
++	jz	L023cbc_inp_aligned
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+ 	movl	%ebx,%ecx
+ 	movl	%edi,%esi
+-L021cbc_inp_aligned:
++L023cbc_inp_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+@@ -416,23 +432,23 @@ L021cbc_inp_aligned:
+ 	movl	(%ebp),%edi
+ 	movl	12(%ebp),%ebx
+ 	testl	$15,%edi
+-	jz	L022cbc_out_aligned
++	jz	L024cbc_out_aligned
+ 	movl	%ebx,%ecx
+ 	leal	(%esp),%esi
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+-L022cbc_out_aligned:
++L024cbc_out_aligned:
+ 	movl	4(%ebp),%esi
+ 	movl	8(%ebp),%ecx
+ 	addl	%ebx,%edi
+ 	addl	%ebx,%esi
+ 	subl	%ebx,%ecx
+ 	movl	$512,%ebx
+-	jz	L023cbc_break
++	jz	L025cbc_break
+ 	cmpl	%ebx,%ecx
+-	jae	L019cbc_loop
+-L020cbc_unaligned_tail:
++	jae	L021cbc_loop
++L022cbc_unaligned_tail:
+ 	xorl	%eax,%eax
+ 	cmpl	%ebp,%esp
+ 	cmovel	%ecx,%eax
+@@ -445,24 +461,24 @@ L020cbc_unaligned_tail:
+ 	movl	%esp,%esi
+ 	movl	%eax,%edi
+ 	movl	%ebx,%ecx
+-	jmp	L019cbc_loop
++	jmp	L021cbc_loop
+ .align	4,0x90
+-L023cbc_break:
++L025cbc_break:
+ 	cmpl	%ebp,%esp
+-	je	L024cbc_done
++	je	L026cbc_done
+ 	pxor	%xmm0,%xmm0
+ 	leal	(%esp),%eax
+-L025cbc_bzero:
++L027cbc_bzero:
+ 	movaps	%xmm0,(%eax)
+ 	leal	16(%eax),%eax
+ 	cmpl	%eax,%ebp
+-	ja	L025cbc_bzero
+-L024cbc_done:
++	ja	L027cbc_bzero
++L026cbc_done:
+ 	movl	16(%ebp),%ebp
+ 	leal	24(%ebp),%esp
+-	jmp	L026cbc_exit
++	jmp	L028cbc_exit
+ .align	4,0x90
+-L018cbc_aligned:
++L020cbc_aligned:
+ 	leal	(%esi,%ecx,1),%ebp
+ 	negl	%ebp
+ 	andl	$4095,%ebp
+@@ -472,7 +488,7 @@ L018cbc_aligned:
+ 	cmovael	%eax,%ebp
+ 	andl	%ecx,%ebp
+ 	subl	%ebp,%ecx
+-	jz	L027cbc_aligned_tail
++	jz	L029cbc_aligned_tail
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+@@ -480,8 +496,8 @@ L018cbc_aligned:
+ 	movaps	(%eax),%xmm0
+ 	movaps	%xmm0,-16(%edx)
+ 	testl	%ebp,%ebp
+-	jz	L026cbc_exit
+-L027cbc_aligned_tail:
++	jz	L028cbc_exit
++L029cbc_aligned_tail:
+ 	movl	%ebp,%ecx
+ 	leal	-24(%esp),%ebp
+ 	movl	%ebp,%esp
+@@ -498,11 +514,11 @@ L027cbc_aligned_tail:
+ 	movl	%esp,%esi
+ 	movl	%eax,%edi
+ 	movl	%ebx,%ecx
+-	jmp	L019cbc_loop
+-L026cbc_exit:
++	jmp	L021cbc_loop
++L028cbc_exit:
+ 	movl	$1,%eax
+ 	leal	4(%esp),%esp
+-L016cbc_abort:
++L018cbc_abort:
+ 	popl	%edi
+ 	popl	%esi
+ 	popl	%ebx
+@@ -512,6 +528,7 @@ L016cbc_abort:
+ .align	4
+ _padlock_cfb_encrypt:
+ L_padlock_cfb_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -521,25 +538,25 @@ L_padlock_cfb_encrypt_begin:
+ 	movl	28(%esp),%edx
+ 	movl	32(%esp),%ecx
+ 	testl	$15,%edx
+-	jnz	L028cfb_abort
++	jnz	L030cfb_abort
+ 	testl	$15,%ecx
+-	jnz	L028cfb_abort
+-	leal	Lpadlock_saved_context-L029cfb_pic_point,%eax
++	jnz	L030cfb_abort
++	leal	Lpadlock_saved_context-L031cfb_pic_point,%eax
+ 	pushfl
+ 	cld
+ 	call	__padlock_verify_ctx
+-L029cfb_pic_point:
++L031cfb_pic_point:
+ 	leal	16(%edx),%edx
+ 	xorl	%eax,%eax
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%edx)
+-	jnz	L030cfb_aligned
++	jnz	L032cfb_aligned
+ 	testl	$15,%edi
+ 	setz	%al
+ 	testl	$15,%esi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+-	jnz	L030cfb_aligned
++	jnz	L032cfb_aligned
+ 	negl	%eax
+ 	movl	$512,%ebx
+ 	notl	%eax
+@@ -557,9 +574,9 @@ L029cfb_pic_point:
+ 	andl	$-16,%ebp
+ 	andl	$-16,%esp
+ 	movl	%eax,16(%ebp)
+-	jmp	L031cfb_loop
++	jmp	L033cfb_loop
+ .align	4,0x90
+-L031cfb_loop:
++L033cfb_loop:
+ 	movl	%edi,(%ebp)
+ 	movl	%esi,4(%ebp)
+ 	movl	%ecx,8(%ebp)
+@@ -568,13 +585,13 @@ L031cfb_loop:
+ 	testl	$15,%edi
+ 	cmovnzl	%esp,%edi
+ 	testl	$15,%esi
+-	jz	L032cfb_inp_aligned
++	jz	L034cfb_inp_aligned
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+ 	movl	%ebx,%ecx
+ 	movl	%edi,%esi
+-L032cfb_inp_aligned:
++L034cfb_inp_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+@@ -584,45 +601,45 @@ L032cfb_inp_aligned:
+ 	movl	(%ebp),%edi
+ 	movl	12(%ebp),%ebx
+ 	testl	$15,%edi
+-	jz	L033cfb_out_aligned
++	jz	L035cfb_out_aligned
+ 	movl	%ebx,%ecx
+ 	leal	(%esp),%esi
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+-L033cfb_out_aligned:
++L035cfb_out_aligned:
+ 	movl	4(%ebp),%esi
+ 	movl	8(%ebp),%ecx
+ 	addl	%ebx,%edi
+ 	addl	%ebx,%esi
+ 	subl	%ebx,%ecx
+ 	movl	$512,%ebx
+-	jnz	L031cfb_loop
++	jnz	L033cfb_loop
+ 	cmpl	%ebp,%esp
+-	je	L034cfb_done
++	je	L036cfb_done
+ 	pxor	%xmm0,%xmm0
+ 	leal	(%esp),%eax
+-L035cfb_bzero:
++L037cfb_bzero:
+ 	movaps	%xmm0,(%eax)
+ 	leal	16(%eax),%eax
+ 	cmpl	%eax,%ebp
+-	ja	L035cfb_bzero
+-L034cfb_done:
++	ja	L037cfb_bzero
++L036cfb_done:
+ 	movl	16(%ebp),%ebp
+ 	leal	24(%ebp),%esp
+-	jmp	L036cfb_exit
++	jmp	L038cfb_exit
+ .align	4,0x90
+-L030cfb_aligned:
++L032cfb_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+ .byte	243,15,167,224
+ 	movaps	(%eax),%xmm0
+ 	movaps	%xmm0,-16(%edx)
+-L036cfb_exit:
++L038cfb_exit:
+ 	movl	$1,%eax
+ 	leal	4(%esp),%esp
+-L028cfb_abort:
++L030cfb_abort:
+ 	popl	%edi
+ 	popl	%esi
+ 	popl	%ebx
+@@ -632,6 +649,7 @@ L028cfb_abort:
+ .align	4
+ _padlock_ofb_encrypt:
+ L_padlock_ofb_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -641,25 +659,25 @@ L_padlock_ofb_encrypt_begin:
+ 	movl	28(%esp),%edx
+ 	movl	32(%esp),%ecx
+ 	testl	$15,%edx
+-	jnz	L037ofb_abort
++	jnz	L039ofb_abort
+ 	testl	$15,%ecx
+-	jnz	L037ofb_abort
+-	leal	Lpadlock_saved_context-L038ofb_pic_point,%eax
++	jnz	L039ofb_abort
++	leal	Lpadlock_saved_context-L040ofb_pic_point,%eax
+ 	pushfl
+ 	cld
+ 	call	__padlock_verify_ctx
+-L038ofb_pic_point:
++L040ofb_pic_point:
+ 	leal	16(%edx),%edx
+ 	xorl	%eax,%eax
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%edx)
+-	jnz	L039ofb_aligned
++	jnz	L041ofb_aligned
+ 	testl	$15,%edi
+ 	setz	%al
+ 	testl	$15,%esi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+-	jnz	L039ofb_aligned
++	jnz	L041ofb_aligned
+ 	negl	%eax
+ 	movl	$512,%ebx
+ 	notl	%eax
+@@ -677,9 +695,9 @@ L038ofb_pic_point:
+ 	andl	$-16,%ebp
+ 	andl	$-16,%esp
+ 	movl	%eax,16(%ebp)
+-	jmp	L040ofb_loop
++	jmp	L042ofb_loop
+ .align	4,0x90
+-L040ofb_loop:
++L042ofb_loop:
+ 	movl	%edi,(%ebp)
+ 	movl	%esi,4(%ebp)
+ 	movl	%ecx,8(%ebp)
+@@ -688,13 +706,13 @@ L040ofb_loop:
+ 	testl	$15,%edi
+ 	cmovnzl	%esp,%edi
+ 	testl	$15,%esi
+-	jz	L041ofb_inp_aligned
++	jz	L043ofb_inp_aligned
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+ 	movl	%ebx,%ecx
+ 	movl	%edi,%esi
+-L041ofb_inp_aligned:
++L043ofb_inp_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+@@ -704,45 +722,45 @@ L041ofb_inp_aligned:
+ 	movl	(%ebp),%edi
+ 	movl	12(%ebp),%ebx
+ 	testl	$15,%edi
+-	jz	L042ofb_out_aligned
++	jz	L044ofb_out_aligned
+ 	movl	%ebx,%ecx
+ 	leal	(%esp),%esi
+ 	shrl	$2,%ecx
+ .byte	243,165
+ 	subl	%ebx,%edi
+-L042ofb_out_aligned:
++L044ofb_out_aligned:
+ 	movl	4(%ebp),%esi
+ 	movl	8(%ebp),%ecx
+ 	addl	%ebx,%edi
+ 	addl	%ebx,%esi
+ 	subl	%ebx,%ecx
+ 	movl	$512,%ebx
+-	jnz	L040ofb_loop
++	jnz	L042ofb_loop
+ 	cmpl	%ebp,%esp
+-	je	L043ofb_done
++	je	L045ofb_done
+ 	pxor	%xmm0,%xmm0
+ 	leal	(%esp),%eax
+-L044ofb_bzero:
++L046ofb_bzero:
+ 	movaps	%xmm0,(%eax)
+ 	leal	16(%eax),%eax
+ 	cmpl	%eax,%ebp
+-	ja	L044ofb_bzero
+-L043ofb_done:
++	ja	L046ofb_bzero
++L045ofb_done:
+ 	movl	16(%ebp),%ebp
+ 	leal	24(%ebp),%esp
+-	jmp	L045ofb_exit
++	jmp	L047ofb_exit
+ .align	4,0x90
+-L039ofb_aligned:
++L041ofb_aligned:
+ 	leal	-16(%edx),%eax
+ 	leal	16(%edx),%ebx
+ 	shrl	$4,%ecx
+ .byte	243,15,167,232
+ 	movaps	(%eax),%xmm0
+ 	movaps	%xmm0,-16(%edx)
+-L045ofb_exit:
++L047ofb_exit:
+ 	movl	$1,%eax
+ 	leal	4(%esp),%esp
+-L037ofb_abort:
++L039ofb_abort:
+ 	popl	%edi
+ 	popl	%esi
+ 	popl	%ebx
+@@ -752,6 +770,7 @@ L037ofb_abort:
+ .align	4
+ _padlock_ctr32_encrypt:
+ L_padlock_ctr32_encrypt_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+@@ -761,14 +780,14 @@ L_padlock_ctr32_encrypt_begin:
+ 	movl	28(%esp),%edx
+ 	movl	32(%esp),%ecx
+ 	testl	$15,%edx
+-	jnz	L046ctr32_abort
++	jnz	L048ctr32_abort
+ 	testl	$15,%ecx
+-	jnz	L046ctr32_abort
+-	leal	Lpadlock_saved_context-L047ctr32_pic_point,%eax
++	jnz	L048ctr32_abort
++	leal	Lpadlock_saved_context-L049ctr32_pic_point,%eax
+ 	pushfl
+ 	cld
+ 	call	__padlock_verify_ctx
+-L047ctr32_pic_point:
++L049ctr32_pic_point:
+ 	leal	16(%edx),%edx
+ 	xorl	%eax,%eax
+ 	movq	-16(%edx),%mm0
+@@ -788,9 +807,9 @@ L047ctr32_pic_point:
+ 	andl	$-16,%ebp
+ 	andl	$-16,%esp
+ 	movl	%eax,16(%ebp)
+-	jmp	L048ctr32_loop
++	jmp	L050ctr32_loop
+ .align	4,0x90
+-L048ctr32_loop:
++L050ctr32_loop:
+ 	movl	%edi,(%ebp)
+ 	movl	%esi,4(%ebp)
+ 	movl	%ecx,8(%ebp)
+@@ -799,7 +818,7 @@ L048ctr32_loop:
+ 	movl	-4(%edx),%ecx
+ 	xorl	%edi,%edi
+ 	movl	-8(%edx),%eax
+-L049ctr32_prepare:
++L051ctr32_prepare:
+ 	movl	%ecx,12(%esp,%edi,1)
+ 	bswap	%ecx
+ 	movq	%mm0,(%esp,%edi,1)
+@@ -808,7 +827,7 @@ L049ctr32_prepare:
+ 	bswap	%ecx
+ 	leal	16(%edi),%edi
+ 	cmpl	%ebx,%edi
+-	jb	L049ctr32_prepare
++	jb	L051ctr32_prepare
+ 	movl	%ecx,-4(%edx)
+ 	leal	(%esp),%esi
+ 	leal	(%esp),%edi
+@@ -821,33 +840,33 @@ L049ctr32_prepare:
+ 	movl	12(%ebp),%ebx
+ 	movl	4(%ebp),%esi
+ 	xorl	%ecx,%ecx
+-L050ctr32_xor:
++L052ctr32_xor:
+ 	movups	(%esi,%ecx,1),%xmm1
+ 	leal	16(%ecx),%ecx
+ 	pxor	-16(%esp,%ecx,1),%xmm1
+ 	movups	%xmm1,-16(%edi,%ecx,1)
+ 	cmpl	%ebx,%ecx
+-	jb	L050ctr32_xor
++	jb	L052ctr32_xor
+ 	movl	8(%ebp),%ecx
+ 	addl	%ebx,%edi
+ 	addl	%ebx,%esi
+ 	subl	%ebx,%ecx
+ 	movl	$512,%ebx
+-	jnz	L048ctr32_loop
++	jnz	L050ctr32_loop
+ 	pxor	%xmm0,%xmm0
+ 	leal	(%esp),%eax
+-L051ctr32_bzero:
++L053ctr32_bzero:
+ 	movaps	%xmm0,(%eax)
+ 	leal	16(%eax),%eax
+ 	cmpl	%eax,%ebp
+-	ja	L051ctr32_bzero
+-L052ctr32_done:
++	ja	L053ctr32_bzero
++L054ctr32_done:
+ 	movl	16(%ebp),%ebp
+ 	leal	24(%ebp),%esp
+ 	movl	$1,%eax
+ 	leal	4(%esp),%esp
+ 	emms
+-L046ctr32_abort:
++L048ctr32_abort:
+ 	popl	%edi
+ 	popl	%esi
+ 	popl	%ebx
+@@ -857,6 +876,7 @@ L046ctr32_abort:
+ .align	4
+ _padlock_xstore:
+ L_padlock_xstore_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	movl	8(%esp),%edi
+ 	movl	12(%esp),%edx
+@@ -865,19 +885,21 @@ L_padlock_xstore_begin:
+ 	ret
+ .align	4
+ __win32_segv_handler:
++.byte	243,15,30,251
+ 	movl	$1,%eax
+ 	movl	4(%esp),%edx
+ 	movl	12(%esp),%ecx
+ 	cmpl	$3221225477,(%edx)
+-	jne	L053ret
++	jne	L055ret
+ 	addl	$4,184(%ecx)
+ 	movl	$0,%eax
+-L053ret:
++L055ret:
+ 	ret
+ .globl	_padlock_sha1_oneshot
+ .align	4
+ _padlock_sha1_oneshot:
+ L_padlock_sha1_oneshot_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	xorl	%eax,%eax
+@@ -907,6 +929,7 @@ L_padlock_sha1_oneshot_begin:
+ .align	4
+ _padlock_sha1_blocks:
+ L_padlock_sha1_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	movl	12(%esp),%edi
+@@ -935,6 +958,7 @@ L_padlock_sha1_blocks_begin:
+ .align	4
+ _padlock_sha256_oneshot:
+ L_padlock_sha256_oneshot_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	xorl	%eax,%eax
+@@ -964,6 +988,7 @@ L_padlock_sha256_oneshot_begin:
+ .align	4
+ _padlock_sha256_blocks:
+ L_padlock_sha256_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	movl	12(%esp),%edi
+@@ -992,6 +1017,7 @@ L_padlock_sha256_blocks_begin:
+ .align	4
+ _padlock_sha512_blocks:
+ L_padlock_sha512_blocks_begin:
++.byte	243,15,30,251
+ 	pushl	%edi
+ 	pushl	%esi
+ 	movl	12(%esp),%edi
+diff --git a/lib/accelerated/x86/macosx/e_padlock-x86_64.s b/lib/accelerated/x86/macosx/e_padlock-x86_64.s
+index a73d7a6c1..64aff29fe 100644
+--- a/lib/accelerated/x86/macosx/e_padlock-x86_64.s
++++ b/lib/accelerated/x86/macosx/e_padlock-x86_64.s
+@@ -1,4 +1,4 @@
+-# Copyright (c) 2011-2013, Andy Polyakov <appro@openssl.org>
++# Copyright (c) 2011-2016, Andy Polyakov <appro@openssl.org>
+ # All rights reserved.
+ #
+ # Redistribution and use in source and binary forms, with or without
+@@ -42,36 +42,50 @@
+ 
+ .p2align	4
+ _padlock_capability:
++
++.byte	243,15,30,250
+ 	movq	%rbx,%r8
+ 	xorl	%eax,%eax
+ 	cpuid
+ 	xorl	%eax,%eax
+-	cmpl	$1953391939,%ebx
++	cmpl	$0x746e6543,%ebx
++	jne	L$zhaoxin
++	cmpl	$0x48727561,%edx
++	jne	L$noluck
++	cmpl	$0x736c7561,%ecx
++	jne	L$noluck
++	jmp	L$zhaoxinEnd
++L$zhaoxin:
++	cmpl	$0x68532020,%ebx
+ 	jne	L$noluck
+-	cmpl	$1215460705,%edx
++	cmpl	$0x68676e61,%edx
+ 	jne	L$noluck
+-	cmpl	$1936487777,%ecx
++	cmpl	$0x20206961,%ecx
+ 	jne	L$noluck
+-	movl	$3221225472,%eax
++L$zhaoxinEnd:
++	movl	$0xC0000000,%eax
+ 	cpuid
+ 	movl	%eax,%edx
+ 	xorl	%eax,%eax
+-	cmpl	$3221225473,%edx
++	cmpl	$0xC0000001,%edx
+ 	jb	L$noluck
+-	movl	$3221225473,%eax
++	movl	$0xC0000001,%eax
+ 	cpuid
+ 	movl	%edx,%eax
+-	andl	$4294967279,%eax
+-	orl	$16,%eax
++	andl	$0xffffffef,%eax
++	orl	$0x10,%eax
+ L$noluck:
+ 	movq	%r8,%rbx
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	_padlock_key_bswap
+ 
+ .p2align	4
+ _padlock_key_bswap:
++
++.byte	243,15,30,250
+ 	movl	240(%rdi),%edx
+ L$bswap_loop:
+ 	movl	(%rdi),%eax
+@@ -83,10 +97,13 @@ L$bswap_loop:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	_padlock_verify_context
+ 
+ .p2align	4
+ _padlock_verify_context:
++
++.byte	243,15,30,250
+ 	movq	%rdi,%rdx
+ 	pushf
+ 	leaq	L$padlock_saved_context(%rip),%rax
+@@ -96,8 +113,11 @@ _padlock_verify_context:
+ 
+ 
+ 
++
+ .p2align	4
+ _padlock_verify_ctx:
++
++.byte	243,15,30,250
+ 	movq	8(%rsp),%r8
+ 	btq	$30,%r8
+ 	jnc	L$verified
+@@ -110,41 +130,53 @@ L$verified:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	_padlock_reload_key
+ 
+ .p2align	4
+ _padlock_reload_key:
++
++.byte	243,15,30,250
+ 	pushf
+ 	popf
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	_padlock_aes_block
+ 
+ .p2align	4
+ _padlock_aes_block:
++
++.byte	243,15,30,250
+ 	movq	%rbx,%r8
+ 	movq	$1,%rcx
+ 	leaq	32(%rdx),%rbx
+ 	leaq	16(%rdx),%rdx
+-.byte	0xf3,0x0f,0xa7,0xc8	
++.byte	0xf3,0x0f,0xa7,0xc8
+ 	movq	%r8,%rbx
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	_padlock_xstore
+ 
+ .p2align	4
+ _padlock_xstore:
++
++.byte	243,15,30,250
+ 	movl	%esi,%edx
+-.byte	0x0f,0xa7,0xc0		
++.byte	0x0f,0xa7,0xc0
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	_padlock_sha1_oneshot
+ 
+ .p2align	4
+ _padlock_sha1_oneshot:
++
++.byte	243,15,30,250
+ 	movq	%rdx,%rcx
+ 	movq	%rdi,%rdx
+ 	movups	(%rdi),%xmm0
+@@ -154,7 +186,7 @@ _padlock_sha1_oneshot:
+ 	movq	%rsp,%rdi
+ 	movl	%eax,16(%rsp)
+ 	xorq	%rax,%rax
+-.byte	0xf3,0x0f,0xa6,0xc8	
++.byte	0xf3,0x0f,0xa6,0xc8
+ 	movaps	(%rsp),%xmm0
+ 	movl	16(%rsp),%eax
+ 	addq	$128+8,%rsp
+@@ -163,10 +195,13 @@ _padlock_sha1_oneshot:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	_padlock_sha1_blocks
+ 
+ .p2align	4
+ _padlock_sha1_blocks:
++
++.byte	243,15,30,250
+ 	movq	%rdx,%rcx
+ 	movq	%rdi,%rdx
+ 	movups	(%rdi),%xmm0
+@@ -176,7 +211,7 @@ _padlock_sha1_blocks:
+ 	movq	%rsp,%rdi
+ 	movl	%eax,16(%rsp)
+ 	movq	$-1,%rax
+-.byte	0xf3,0x0f,0xa6,0xc8	
++.byte	0xf3,0x0f,0xa6,0xc8
+ 	movaps	(%rsp),%xmm0
+ 	movl	16(%rsp),%eax
+ 	addq	$128+8,%rsp
+@@ -185,10 +220,13 @@ _padlock_sha1_blocks:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	_padlock_sha256_oneshot
+ 
+ .p2align	4
+ _padlock_sha256_oneshot:
++
++.byte	243,15,30,250
+ 	movq	%rdx,%rcx
+ 	movq	%rdi,%rdx
+ 	movups	(%rdi),%xmm0
+@@ -198,7 +236,7 @@ _padlock_sha256_oneshot:
+ 	movq	%rsp,%rdi
+ 	movaps	%xmm1,16(%rsp)
+ 	xorq	%rax,%rax
+-.byte	0xf3,0x0f,0xa6,0xd0	
++.byte	0xf3,0x0f,0xa6,0xd0
+ 	movaps	(%rsp),%xmm0
+ 	movaps	16(%rsp),%xmm1
+ 	addq	$128+8,%rsp
+@@ -207,10 +245,13 @@ _padlock_sha256_oneshot:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	_padlock_sha256_blocks
+ 
+ .p2align	4
+ _padlock_sha256_blocks:
++
++.byte	243,15,30,250
+ 	movq	%rdx,%rcx
+ 	movq	%rdi,%rdx
+ 	movups	(%rdi),%xmm0
+@@ -220,7 +261,7 @@ _padlock_sha256_blocks:
+ 	movq	%rsp,%rdi
+ 	movaps	%xmm1,16(%rsp)
+ 	movq	$-1,%rax
+-.byte	0xf3,0x0f,0xa6,0xd0	
++.byte	0xf3,0x0f,0xa6,0xd0
+ 	movaps	(%rsp),%xmm0
+ 	movaps	16(%rsp),%xmm1
+ 	addq	$128+8,%rsp
+@@ -229,10 +270,13 @@ _padlock_sha256_blocks:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .globl	_padlock_sha512_blocks
+ 
+ .p2align	4
+ _padlock_sha512_blocks:
++
++.byte	243,15,30,250
+ 	movq	%rdx,%rcx
+ 	movq	%rdi,%rdx
+ 	movups	(%rdi),%xmm0
+@@ -245,7 +289,7 @@ _padlock_sha512_blocks:
+ 	movaps	%xmm1,16(%rsp)
+ 	movaps	%xmm2,32(%rsp)
+ 	movaps	%xmm3,48(%rsp)
+-.byte	0xf3,0x0f,0xa6,0xe0	
++.byte	0xf3,0x0f,0xa6,0xe0
+ 	movaps	(%rsp),%xmm0
+ 	movaps	16(%rsp),%xmm1
+ 	movaps	32(%rsp),%xmm2
+@@ -257,10 +301,13 @@ _padlock_sha512_blocks:
+ 	movups	%xmm3,48(%rdx)
+ 	.byte	0xf3,0xc3
+ 
++
+ .globl	_padlock_ecb_encrypt
+ 
+ .p2align	4
+ _padlock_ecb_encrypt:
++
++.byte	243,15,30,250
+ 	pushq	%rbp
+ 	pushq	%rbx
+ 
+@@ -278,9 +325,9 @@ _padlock_ecb_encrypt:
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%rdx)
+ 	jnz	L$ecb_aligned
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	setz	%al
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+ 	jnz	L$ecb_aligned
+@@ -304,7 +351,7 @@ _padlock_ecb_encrypt:
+ 	cmoveq	%rdi,%rax
+ 	addq	%rcx,%rax
+ 	negq	%rax
+-	andq	$4095,%rax
++	andq	$0xfff,%rax
+ 	cmpq	$128,%rax
+ 	movq	$-128,%rax
+ 	cmovaeq	%rbx,%rax
+@@ -320,12 +367,12 @@ L$ecb_loop:
+ 	movq	%rcx,%r10
+ 	movq	%rbx,%rcx
+ 	movq	%rbx,%r11
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	cmovnzq	%rsp,%rdi
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	jz	L$ecb_inp_aligned
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ 	movq	%rbx,%rcx
+ 	movq	%rdi,%rsi
+@@ -333,15 +380,15 @@ L$ecb_inp_aligned:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,200	
++.byte	0xf3,0x0f,0xa7,200
+ 	movq	%r8,%rdi
+ 	movq	%r11,%rbx
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	jz	L$ecb_out_aligned
+ 	movq	%rbx,%rcx
+ 	leaq	(%rsp),%rsi
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ L$ecb_out_aligned:
+ 	movq	%r9,%rsi
+@@ -362,7 +409,7 @@ L$ecb_unaligned_tail:
+ 	subq	%rax,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	movq	%rsp,%rsi
+ 	movq	%r8,%rdi
+ 	movq	%rbx,%rcx
+@@ -388,7 +435,7 @@ L$ecb_done:
+ L$ecb_aligned:
+ 	leaq	(%rsi,%rcx,1),%rbp
+ 	negq	%rbp
+-	andq	$4095,%rbp
++	andq	$0xfff,%rbp
+ 	xorl	%eax,%eax
+ 	cmpq	$128,%rbp
+ 	movq	$128-1,%rbp
+@@ -399,7 +446,7 @@ L$ecb_aligned:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,200	
++.byte	0xf3,0x0f,0xa7,200
+ 	testq	%rbp,%rbp
+ 	jz	L$ecb_exit
+ 
+@@ -411,7 +458,7 @@ L$ecb_aligned_tail:
+ 	subq	%rcx,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	leaq	(%r8),%rdi
+ 	leaq	(%rsp),%rsi
+ 	movq	%rbx,%rcx
+@@ -424,10 +471,13 @@ L$ecb_abort:
+ 	popq	%rbp
+ 	.byte	0xf3,0xc3
+ 
++
+ .globl	_padlock_cbc_encrypt
+ 
+ .p2align	4
+ _padlock_cbc_encrypt:
++
++.byte	243,15,30,250
+ 	pushq	%rbp
+ 	pushq	%rbx
+ 
+@@ -445,9 +495,9 @@ _padlock_cbc_encrypt:
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%rdx)
+ 	jnz	L$cbc_aligned
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	setz	%al
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+ 	jnz	L$cbc_aligned
+@@ -471,7 +521,7 @@ _padlock_cbc_encrypt:
+ 	cmoveq	%rdi,%rax
+ 	addq	%rcx,%rax
+ 	negq	%rax
+-	andq	$4095,%rax
++	andq	$0xfff,%rax
+ 	cmpq	$64,%rax
+ 	movq	$-64,%rax
+ 	cmovaeq	%rbx,%rax
+@@ -487,12 +537,12 @@ L$cbc_loop:
+ 	movq	%rcx,%r10
+ 	movq	%rbx,%rcx
+ 	movq	%rbx,%r11
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	cmovnzq	%rsp,%rdi
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	jz	L$cbc_inp_aligned
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ 	movq	%rbx,%rcx
+ 	movq	%rdi,%rsi
+@@ -500,17 +550,17 @@ L$cbc_inp_aligned:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,208	
++.byte	0xf3,0x0f,0xa7,208
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ 	movq	%r8,%rdi
+ 	movq	%r11,%rbx
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	jz	L$cbc_out_aligned
+ 	movq	%rbx,%rcx
+ 	leaq	(%rsp),%rsi
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ L$cbc_out_aligned:
+ 	movq	%r9,%rsi
+@@ -531,7 +581,7 @@ L$cbc_unaligned_tail:
+ 	subq	%rax,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	movq	%rsp,%rsi
+ 	movq	%r8,%rdi
+ 	movq	%rbx,%rcx
+@@ -557,7 +607,7 @@ L$cbc_done:
+ L$cbc_aligned:
+ 	leaq	(%rsi,%rcx,1),%rbp
+ 	negq	%rbp
+-	andq	$4095,%rbp
++	andq	$0xfff,%rbp
+ 	xorl	%eax,%eax
+ 	cmpq	$64,%rbp
+ 	movq	$64-1,%rbp
+@@ -568,7 +618,7 @@ L$cbc_aligned:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,208	
++.byte	0xf3,0x0f,0xa7,208
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ 	testq	%rbp,%rbp
+@@ -582,7 +632,7 @@ L$cbc_aligned_tail:
+ 	subq	%rcx,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	leaq	(%r8),%rdi
+ 	leaq	(%rsp),%rsi
+ 	movq	%rbx,%rcx
+@@ -595,10 +645,13 @@ L$cbc_abort:
+ 	popq	%rbp
+ 	.byte	0xf3,0xc3
+ 
++
+ .globl	_padlock_cfb_encrypt
+ 
+ .p2align	4
+ _padlock_cfb_encrypt:
++
++.byte	243,15,30,250
+ 	pushq	%rbp
+ 	pushq	%rbx
+ 
+@@ -616,9 +669,9 @@ _padlock_cfb_encrypt:
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%rdx)
+ 	jnz	L$cfb_aligned
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	setz	%al
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+ 	jnz	L$cfb_aligned
+@@ -645,12 +698,12 @@ L$cfb_loop:
+ 	movq	%rcx,%r10
+ 	movq	%rbx,%rcx
+ 	movq	%rbx,%r11
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	cmovnzq	%rsp,%rdi
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	jz	L$cfb_inp_aligned
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ 	movq	%rbx,%rcx
+ 	movq	%rdi,%rsi
+@@ -658,17 +711,17 @@ L$cfb_inp_aligned:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,224	
++.byte	0xf3,0x0f,0xa7,224
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ 	movq	%r8,%rdi
+ 	movq	%r11,%rbx
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	jz	L$cfb_out_aligned
+ 	movq	%rbx,%rcx
+ 	leaq	(%rsp),%rsi
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ L$cfb_out_aligned:
+ 	movq	%r9,%rsi
+@@ -698,7 +751,7 @@ L$cfb_aligned:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,224	
++.byte	0xf3,0x0f,0xa7,224
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ L$cfb_exit:
+@@ -709,10 +762,13 @@ L$cfb_abort:
+ 	popq	%rbp
+ 	.byte	0xf3,0xc3
+ 
++
+ .globl	_padlock_ofb_encrypt
+ 
+ .p2align	4
+ _padlock_ofb_encrypt:
++
++.byte	243,15,30,250
+ 	pushq	%rbp
+ 	pushq	%rbx
+ 
+@@ -730,9 +786,9 @@ _padlock_ofb_encrypt:
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%rdx)
+ 	jnz	L$ofb_aligned
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	setz	%al
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+ 	jnz	L$ofb_aligned
+@@ -759,12 +815,12 @@ L$ofb_loop:
+ 	movq	%rcx,%r10
+ 	movq	%rbx,%rcx
+ 	movq	%rbx,%r11
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	cmovnzq	%rsp,%rdi
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	jz	L$ofb_inp_aligned
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ 	movq	%rbx,%rcx
+ 	movq	%rdi,%rsi
+@@ -772,17 +828,17 @@ L$ofb_inp_aligned:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,232	
++.byte	0xf3,0x0f,0xa7,232
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ 	movq	%r8,%rdi
+ 	movq	%r11,%rbx
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	jz	L$ofb_out_aligned
+ 	movq	%rbx,%rcx
+ 	leaq	(%rsp),%rsi
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ L$ofb_out_aligned:
+ 	movq	%r9,%rsi
+@@ -812,7 +868,7 @@ L$ofb_aligned:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,232	
++.byte	0xf3,0x0f,0xa7,232
+ 	movdqa	(%rax),%xmm0
+ 	movdqa	%xmm0,-16(%rdx)
+ L$ofb_exit:
+@@ -823,10 +879,13 @@ L$ofb_abort:
+ 	popq	%rbp
+ 	.byte	0xf3,0xc3
+ 
++
+ .globl	_padlock_ctr32_encrypt
+ 
+ .p2align	4
+ _padlock_ctr32_encrypt:
++
++.byte	243,15,30,250
+ 	pushq	%rbp
+ 	pushq	%rbx
+ 
+@@ -844,9 +903,9 @@ _padlock_ctr32_encrypt:
+ 	xorl	%ebx,%ebx
+ 	testl	$32,(%rdx)
+ 	jnz	L$ctr32_aligned
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	setz	%al
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	setz	%bl
+ 	testl	%ebx,%eax
+ 	jnz	L$ctr32_aligned
+@@ -881,7 +940,7 @@ L$ctr32_reenter:
+ 	cmoveq	%rdi,%rax
+ 	addq	%rcx,%rax
+ 	negq	%rax
+-	andq	$4095,%rax
++	andq	$0xfff,%rax
+ 	cmpq	$32,%rax
+ 	movq	$-32,%rax
+ 	cmovaeq	%rbx,%rax
+@@ -897,12 +956,12 @@ L$ctr32_loop:
+ 	movq	%rcx,%r10
+ 	movq	%rbx,%rcx
+ 	movq	%rbx,%r11
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	cmovnzq	%rsp,%rdi
+-	testq	$15,%rsi
++	testq	$0x0f,%rsi
+ 	jz	L$ctr32_inp_aligned
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ 	movq	%rbx,%rcx
+ 	movq	%rdi,%rsi
+@@ -910,23 +969,23 @@ L$ctr32_inp_aligned:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,216	
++.byte	0xf3,0x0f,0xa7,216
+ 	movl	-4(%rdx),%eax
+-	testl	$4294901760,%eax
++	testl	$0xffff0000,%eax
+ 	jnz	L$ctr32_no_carry
+ 	bswapl	%eax
+-	addl	$65536,%eax
++	addl	$0x10000,%eax
+ 	bswapl	%eax
+ 	movl	%eax,-4(%rdx)
+ L$ctr32_no_carry:
+ 	movq	%r8,%rdi
+ 	movq	%r11,%rbx
+-	testq	$15,%rdi
++	testq	$0x0f,%rdi
+ 	jz	L$ctr32_out_aligned
+ 	movq	%rbx,%rcx
+ 	leaq	(%rsp),%rsi
+ 	shrq	$3,%rcx
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	subq	%rbx,%rdi
+ L$ctr32_out_aligned:
+ 	movq	%r9,%rsi
+@@ -944,7 +1003,7 @@ L$ctr32_out_aligned:
+ 	cmoveq	%rdi,%rax
+ 	addq	%rcx,%rax
+ 	negq	%rax
+-	andq	$4095,%rax
++	andq	$0xfff,%rax
+ 	cmpq	$32,%rax
+ 	movq	$-32,%rax
+ 	cmovaeq	%rbx,%rax
+@@ -959,7 +1018,7 @@ L$ctr32_unaligned_tail:
+ 	subq	%rax,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	movq	%rsp,%rsi
+ 	movq	%r8,%rdi
+ 	movq	%rbx,%rcx
+@@ -986,7 +1045,7 @@ L$ctr32_aligned:
+ 	movl	-4(%rdx),%eax
+ 	bswapl	%eax
+ 	negl	%eax
+-	andl	$65535,%eax
++	andl	$0xffff,%eax
+ 	movq	$1048576,%rbx
+ 	shll	$4,%eax
+ 	cmovzq	%rbx,%rax
+@@ -1003,11 +1062,11 @@ L$ctr32_aligned_loop:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,216	
++.byte	0xf3,0x0f,0xa7,216
+ 
+ 	movl	-4(%rdx),%eax
+ 	bswapl	%eax
+-	addl	$65536,%eax
++	addl	$0x10000,%eax
+ 	bswapl	%eax
+ 	movl	%eax,-4(%rdx)
+ 
+@@ -1021,7 +1080,7 @@ L$ctr32_aligned_loop:
+ L$ctr32_aligned_skip:
+ 	leaq	(%rsi,%rcx,1),%rbp
+ 	negq	%rbp
+-	andq	$4095,%rbp
++	andq	$0xfff,%rbp
+ 	xorl	%eax,%eax
+ 	cmpq	$32,%rbp
+ 	movq	$32-1,%rbp
+@@ -1032,7 +1091,7 @@ L$ctr32_aligned_skip:
+ 	leaq	-16(%rdx),%rax
+ 	leaq	16(%rdx),%rbx
+ 	shrq	$4,%rcx
+-.byte	0xf3,0x0f,0xa7,216	
++.byte	0xf3,0x0f,0xa7,216
+ 	testq	%rbp,%rbp
+ 	jz	L$ctr32_exit
+ 
+@@ -1044,7 +1103,7 @@ L$ctr32_aligned_tail:
+ 	subq	%rcx,%rsp
+ 	shrq	$3,%rcx
+ 	leaq	(%rsp),%rdi
+-.byte	0xf3,0x48,0xa5		
++.byte	0xf3,0x48,0xa5
+ 	leaq	(%r8),%rdi
+ 	leaq	(%rsp),%rsi
+ 	movq	%rbx,%rcx
+@@ -1057,6 +1116,7 @@ L$ctr32_abort:
+ 	popq	%rbp
+ 	.byte	0xf3,0xc3
+ 
++
+ .byte	86,73,65,32,80,97,100,108,111,99,107,32,120,56,54,95,54,52,32,109,111,100,117,108,101,44,32,67,82,89,80,84,79,71,65,77,83,32,98,121,32,60,97,112,112,114,111,64,111,112,101,110,115,115,108,46,111,114,103,62,0
+ .p2align	4
+ .data	
+diff --git a/lib/accelerated/x86/macosx/ghash-x86_64.s b/lib/accelerated/x86/macosx/ghash-x86_64.s
+index 5fd321675..974d34dc7 100644
+--- a/lib/accelerated/x86/macosx/ghash-x86_64.s
++++ b/lib/accelerated/x86/macosx/ghash-x86_64.s
+@@ -45,6 +45,7 @@
+ .p2align	4
+ _gcm_gmult_4bit:
+ 
++.byte	243,15,30,250
+ 	pushq	%rbx
+ 
+ 	pushq	%rbp
+@@ -150,6 +151,7 @@ L$gmult_epilogue:
+ .p2align	4
+ _gcm_ghash_4bit:
+ 
++.byte	243,15,30,250
+ 	pushq	%rbx
+ 
+ 	pushq	%rbp
+@@ -891,6 +893,7 @@ L$_init_clmul:
+ .p2align	4
+ _gcm_gmult_clmul:
+ 
++.byte	243,15,30,250
+ L$_gmult_clmul:
+ 	movdqu	(%rdi),%xmm0
+ 	movdqa	L$bswap_mask(%rip),%xmm5
+@@ -944,6 +947,7 @@ L$_gmult_clmul:
+ .p2align	5
+ _gcm_ghash_clmul:
+ 
++.byte	243,15,30,250
+ L$_ghash_clmul:
+ 	movdqa	L$bswap_mask(%rip),%xmm10
+ 
+@@ -1438,6 +1442,7 @@ L$init_start_avx:
+ .p2align	5
+ _gcm_gmult_avx:
+ 
++.byte	243,15,30,250
+ 	jmp	L$_gmult_clmul
+ 
+ 
+@@ -1446,6 +1451,7 @@ _gcm_gmult_avx:
+ .p2align	5
+ _gcm_ghash_avx:
+ 
++.byte	243,15,30,250
+ 	vzeroupper
+ 
+ 	vmovdqu	(%rdi),%xmm10
+diff --git a/lib/accelerated/x86/macosx/sha1-ssse3-x86.s b/lib/accelerated/x86/macosx/sha1-ssse3-x86.s
+index 985d4af8d..f51c5a318 100644
+--- a/lib/accelerated/x86/macosx/sha1-ssse3-x86.s
++++ b/lib/accelerated/x86/macosx/sha1-ssse3-x86.s
+@@ -42,6 +42,7 @@
+ .align	4
+ _sha1_block_data_order:
+ L_sha1_block_data_order_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+diff --git a/lib/accelerated/x86/macosx/sha1-ssse3-x86_64.s b/lib/accelerated/x86/macosx/sha1-ssse3-x86_64.s
+index a576acc25..7b5d9dfc9 100644
+--- a/lib/accelerated/x86/macosx/sha1-ssse3-x86_64.s
++++ b/lib/accelerated/x86/macosx/sha1-ssse3-x86_64.s
+@@ -1460,10 +1460,10 @@ L$oop_shaext:
+ 	pshufd	$27,%xmm1,%xmm1
+ 	movdqu	%xmm0,(%rdi)
+ 	movd	%xmm1,16(%rdi)
+-
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .p2align	4
+ sha1_block_data_order_ssse3:
+ _ssse3_shortcut:
+diff --git a/lib/accelerated/x86/macosx/sha256-ssse3-x86.s b/lib/accelerated/x86/macosx/sha256-ssse3-x86.s
+index 8d257109c..36781d480 100644
+--- a/lib/accelerated/x86/macosx/sha256-ssse3-x86.s
++++ b/lib/accelerated/x86/macosx/sha256-ssse3-x86.s
+@@ -42,6 +42,7 @@
+ .align	4
+ _sha256_block_data_order:
+ L_sha256_block_data_order_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+diff --git a/lib/accelerated/x86/macosx/sha256-ssse3-x86_64.s b/lib/accelerated/x86/macosx/sha256-ssse3-x86_64.s
+index fd0c24735..9fed36b9c 100644
+--- a/lib/accelerated/x86/macosx/sha256-ssse3-x86_64.s
++++ b/lib/accelerated/x86/macosx/sha256-ssse3-x86_64.s
+@@ -1814,6 +1814,7 @@ K256:
+ .p2align	6
+ sha256_block_data_order_shaext:
+ _shaext_shortcut:
++
+ 	leaq	K256+128(%rip),%rcx
+ 	movdqu	(%rdi),%xmm1
+ 	movdqu	16(%rdi),%xmm2
+@@ -2018,6 +2019,7 @@ L$oop_shaext:
+ 	.byte	0xf3,0xc3
+ 
+ 
++
+ .p2align	6
+ sha256_block_data_order_ssse3:
+ 
+@@ -4277,7 +4279,15 @@ L$oop_avx2:
+ 	vmovdqa	%ymm4,0(%rsp)
+ 	xorl	%r14d,%r14d
+ 	vmovdqa	%ymm5,32(%rsp)
++
++	movq	88(%rsp),%rdi
++
+ 	leaq	-64(%rsp),%rsp
++
++
++
++	movq	%rdi,-8(%rsp)
++
+ 	movl	%ebx,%edi
+ 	vmovdqa	%ymm6,0(%rsp)
+ 	xorl	%ecx,%edi
+@@ -4289,6 +4299,12 @@ L$oop_avx2:
+ .p2align	4
+ L$avx2_00_47:
+ 	leaq	-64(%rsp),%rsp
++
++
++	pushq	64-8(%rsp)
++
++	leaq	8(%rsp),%rsp
++
+ 	vpalignr	$4,%ymm0,%ymm1,%ymm4
+ 	addl	0+128(%rsp),%r11d
+ 	andl	%r8d,%r12d
+@@ -4544,6 +4560,12 @@ L$avx2_00_47:
+ 	movl	%r9d,%r12d
+ 	vmovdqa	%ymm6,32(%rsp)
+ 	leaq	-64(%rsp),%rsp
++
++
++	pushq	64-8(%rsp)
++
++	leaq	8(%rsp),%rsp
++
+ 	vpalignr	$4,%ymm2,%ymm3,%ymm4
+ 	addl	0+128(%rsp),%r11d
+ 	andl	%r8d,%r12d
+@@ -5419,6 +5441,8 @@ L$ower_avx2:
+ 
+ 	leaq	448(%rsp),%rsp
+ 
++
++
+ 	addl	0(%rdi),%eax
+ 	addl	4(%rdi),%ebx
+ 	addl	8(%rdi),%ecx
+@@ -5444,9 +5468,11 @@ L$ower_avx2:
+ 	jbe	L$oop_avx2
+ 	leaq	(%rsp),%rbp
+ 
++
++
++
+ L$done_avx2:
+-	leaq	(%rbp),%rsp
+-	movq	88(%rsp),%rsi
++	movq	88(%rbp),%rsi
+ 
+ 	vzeroupper
+ 	movq	-48(%rsi),%r15
+diff --git a/lib/accelerated/x86/macosx/sha512-ssse3-x86.s b/lib/accelerated/x86/macosx/sha512-ssse3-x86.s
+index 4e60bb45f..248a35ee1 100644
+--- a/lib/accelerated/x86/macosx/sha512-ssse3-x86.s
++++ b/lib/accelerated/x86/macosx/sha512-ssse3-x86.s
+@@ -42,6 +42,7 @@
+ .align	4
+ _sha512_block_data_order:
+ L_sha512_block_data_order_begin:
++.byte	243,15,30,251
+ 	pushl	%ebp
+ 	pushl	%ebx
+ 	pushl	%esi
+diff --git a/lib/accelerated/x86/macosx/sha512-ssse3-x86_64.s b/lib/accelerated/x86/macosx/sha512-ssse3-x86_64.s
+index 8bf161601..e78d90f2d 100644
+--- a/lib/accelerated/x86/macosx/sha512-ssse3-x86_64.s
++++ b/lib/accelerated/x86/macosx/sha512-ssse3-x86_64.s
+@@ -4204,7 +4204,15 @@ L$oop_avx2:
+ 	vmovdqa	%ymm10,64(%rsp)
+ 	vpaddq	64(%rbp),%ymm6,%ymm10
+ 	vmovdqa	%ymm11,96(%rsp)
++
++	movq	152(%rsp),%rdi
++
+ 	leaq	-128(%rsp),%rsp
++
++
++
++	movq	%rdi,-8(%rsp)
++
+ 	vpaddq	96(%rbp),%ymm7,%ymm11
+ 	vmovdqa	%ymm8,0(%rsp)
+ 	xorq	%r14,%r14
+@@ -4220,6 +4228,12 @@ L$oop_avx2:
+ .p2align	4
+ L$avx2_00_47:
+ 	leaq	-128(%rsp),%rsp
++
++
++	pushq	128-8(%rsp)
++
++	leaq	8(%rsp),%rsp
++
+ 	vpalignr	$8,%ymm0,%ymm1,%ymm8
+ 	addq	0+256(%rsp),%r11
+ 	andq	%r8,%r12
+@@ -4513,6 +4527,12 @@ L$avx2_00_47:
+ 	movq	%r9,%r12
+ 	vmovdqa	%ymm10,96(%rsp)
+ 	leaq	-128(%rsp),%rsp
++
++
++	pushq	128-8(%rsp)
++
++	leaq	8(%rsp),%rsp
++
+ 	vpalignr	$8,%ymm4,%ymm5,%ymm8
+ 	addq	0+256(%rsp),%r11
+ 	andq	%r8,%r12
+@@ -5426,6 +5446,8 @@ L$ower_avx2:
+ 
+ 	leaq	1152(%rsp),%rsp
+ 
++
++
+ 	addq	0(%rdi),%rax
+ 	addq	8(%rdi),%rbx
+ 	addq	16(%rdi),%rcx
+@@ -5451,9 +5473,11 @@ L$ower_avx2:
+ 	jbe	L$oop_avx2
+ 	leaq	(%rsp),%rbp
+ 
++
++
++
+ L$done_avx2:
+-	leaq	(%rbp),%rsp
+-	movq	152(%rsp),%rsi
++	movq	152(%rbp),%rsi
+ 
+ 	vzeroupper
+ 	movq	-48(%rsi),%r15
+-- 
+2.25.4
+

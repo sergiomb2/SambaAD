@@ -9,10 +9,11 @@
 %bcond_without fips
 
 %global realname gnutls
+%global suffix_ver 3.6
 
 Name: compat-gnutls36
 Version: 3.6.15
-Release: 2%{?dist}
+Release: 3%{?dist}
 Summary: A TLS protocol implementation
 # The libraries are LGPLv2.1+, utilities are GPLv3+
 License: GPLv3+ and LGPLv2+
@@ -23,7 +24,7 @@ Source1: ftp://ftp.gnutls.org/gcrypt/gnutls/v3.6/%{realname}-%{version}.tar.xz.s
 Source2: gpgkey-462225C3B46F34879FC8496CD605848ED7E69871.gpg
 Patch1:	gnutls-3.2.7-rpath.patch
 Patch2: gnutls-3.6.4-no-now-guile.patch
-Patch4: gnutls-3.6.8-fips-aes-cbc-kat.patch
+Patch3:	gnutls-3.6.13-enable-intel-cet.patch
 
 BuildRequires: p11-kit-devel >= 0.21.3
 BuildRequires: gettext-devel
@@ -206,21 +207,27 @@ echo "SYSTEM=NORMAL" >> tests/system.prio
 #rm -rf build-aux/ m4/
 #autoreconf -i
 #autoreconf -v
-%configure \
-    --disable-static \
+#configure \
+#if 0%{?rhel} && 0%{?rhel} < 7
+#    --with-included-libtasn1 \
+#endif
+
+%configure --with-libtasn1-prefix=%{_prefix} \
 %if %{with fips}
-    --enable-fips140-mode \
+           --enable-fips140-mode \
 %endif
-    --enable-sha1-support \
-    --disable-non-suiteb-curves \
-    --disable-openssl-compatibility \
-    --with-system-priority-file=%{_sysconfdir}/crypto-policies/back-ends/gnutls.config \
-    --with-trousers-lib=%{_libdir}/libtspi.so.1 \
-    --htmldir=%{_docdir}/%{name} \
+	   --enable-tls13-support \
+	   --enable-sha1-support \
+           --disable-static \
+           --disable-openssl-compatibility \
+           --disable-non-suiteb-curves \
+           --with-system-priority-file=%{_sysconfdir}/crypto-policies/back-ends/gnutls.config \
+           --with-trousers-lib=%{_libdir}/libtspi.so.1 \
+           --htmldir=%{_docdir}/%{name} \
 %if %{with guile}
-    --enable-guile \
+           --enable-guile \
 %else
-    --disable-guile \
+           --disable-guile \
 %endif
 %if %{with p11kit}
     --with-p11-kit \
@@ -228,15 +235,12 @@ echo "SYSTEM=NORMAL" >> tests/system.prio
 %else
     --without-p11-kit \
 %endif
-%if 0%{?rhel} && 0%{?rhel} < 7
-    --with-included-libtasn1 \
-%endif
 %if %{with dane}
-    --with-unbound-root-key-file=/var/lib/unbound/root.key \
-    --enable-dane \
+           --with-unbound-root-key-file=/var/lib/unbound/root.key \
+           --enable-dane \
 %endif
-    --disable-rpath \
-    --with-default-priority-string="@SYSTEM"
+           --disable-rpath \
+           --with-default-priority-string="@SYSTEM"
 
 %make_build
 
@@ -259,25 +263,7 @@ rm -f $RPM_BUILD_ROOT%{_libdir}/guile/2.0/guile-gnutls*.a
 rm -f $RPM_BUILD_ROOT%{_libdir}/guile/2.0/guile-gnutls*.la
 rm -f $RPM_BUILD_ROOT%{_libdir}/gnutls/libpkcs11mock1.*
 
-#mkdir -p $RPM_BUILD_ROOT%{_includedir}/%{name}
-#mv $RPM_BUILD_ROOT%{_includedir}/gnutls $RPM_BUILD_ROOT%{_includedir}/%{name}/
-#mkdir -p $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
-#mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/gnutls.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
-#sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/gnutls.pc
-#sed -r -i 's#^(libdir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/nettle.pc
-#sed -r -i 's#^(libdir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/hogweed.pc
-
-# Rename or delete bin files to avoid conflicts with base packages
-#cp -f %{SOURCE1} $RPM_BUILD_ROOT/%{_bindir}/libgnutls-config
-# rm -f $RPM_BUILD_ROOT%{_mandir}/man3/*srp*
-# rm -f $RPM_BUILD_ROOT%{_infodir}/dir
-# all 
-#rm $RPM_BUILD_ROOT%{_mandir}/man3/*
-#rm $RPM_BUILD_ROOT%{_infodir}/*
 %if %{with dane}
-#mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/gnutls-dane.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
-#sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/gnutls-dane.pc
-
 # For Transaction check error:
 #  file /usr/lib64/libgnutls-dane.so.0 from install of gnutls-dane-3.3.29-9.el7_6.x86_64 conflicts with file from package compat-gnutls36-dane-3.6.8-13.el7.x86_64
 #  file /usr/bin/danetool from install of gnutls-utils-3.3.29-9.el7_6.x86_64 conflicts with file from package compat-gnutls36-utils-3.6.8-13.el7.x86_64
@@ -306,11 +292,14 @@ mv $RPM_BUILD_ROOT%{_mandir}/man1/psktool.1 $RPM_BUILD_ROOT%{_mandir}/man1/pskto
 rm $RPM_BUILD_ROOT%{_mandir}/man1/p11tool.1
 rm $RPM_BUILD_ROOT%{_mandir}/man1/tpmtool.1
 
+# remove locale files because they cause conflicts with base package
 #find_lang gnutls
 rm -rf $RPM_BUILD_ROOT%{_datadir}/locale/
 
 %check
+%ifarch x86_64
 make check %{?_smp_mflags}
+%endif
 
 %post -p /sbin/ldconfig
 %postun -p /sbin/ldconfig
@@ -322,6 +311,16 @@ make check %{?_smp_mflags}
 %post guile -p /sbin/ldconfig
 %postun guile -p /sbin/ldconfig
 %endif
+
+%post devel
+if [ -f %{_infodir}/gnutls.info.gz ]; then
+    /sbin/install-info %{_infodir}/gnutls.info.gz %{_infodir}/dir || :
+fi
+
+%preun devel
+if [ $1 = 0 -a -f %{_infodir}/gnutls.info.gz ]; then
+   /sbin/install-info --delete %{_infodir}/gnutls.info.gz %{_infodir}/dir || :
+fi
 
 %files
 %{_libdir}/libgnutls.so.30*
@@ -367,6 +366,9 @@ make check %{?_smp_mflags}
 %endif
 
 %changelog
+* Tue Sep 29 2020 Sérgio Basto <sergio@serjux.com> - 3.6.15-3
+- Follow Centos 8-stream
+
 * Fri Sep 25 2020 Sérgio Basto <sergio@serjux.com> - 3.6.15-2
 - Some packaging fixes
 
