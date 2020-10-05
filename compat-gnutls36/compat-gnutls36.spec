@@ -13,7 +13,7 @@
 
 Name: compat-gnutls36
 Version: 3.6.15
-Release: 3%{?dist}
+Release: 4%{?dist}
 Summary: A TLS protocol implementation
 # The libraries are LGPLv2.1+, utilities are GPLv3+
 License: GPLv3+ and LGPLv2+
@@ -24,7 +24,6 @@ Source1: ftp://ftp.gnutls.org/gcrypt/gnutls/v3.6/%{realname}-%{version}.tar.xz.s
 Source2: gpgkey-462225C3B46F34879FC8496CD605848ED7E69871.gpg
 Patch1:	gnutls-3.2.7-rpath.patch
 Patch2: gnutls-3.6.4-no-now-guile.patch
-Patch3:	gnutls-3.6.13-enable-intel-cet.patch
 
 BuildRequires: p11-kit-devel >= 0.21.3
 BuildRequires: gettext-devel
@@ -337,7 +336,6 @@ fi
 #/usr/gnutls/bin/libgnutls*-config
 %{_includedir}/gnutls/*.h
 %{_libdir}/libgnutls*.so
-#dir %%{_libdir}/%%{name}
 %if %{with fips}
 %{_libdir}/.libgnutls.so.*.hmac
 %endif
@@ -366,6 +364,9 @@ fi
 %endif
 
 %changelog
+* Mon Oct 05 2020 Sérgio Basto <sergio@serjux.com> - 3.6.15-4
+- Remove enable-intel-cet.patch because is not official and could give many work
+
 * Tue Sep 29 2020 Sérgio Basto <sergio@serjux.com> - 3.6.15-3
 - Follow Centos 8-stream
 
