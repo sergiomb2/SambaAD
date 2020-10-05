@@ -1,5 +1,4 @@
 %global suffix_ver 3.4
-#global __pkgconfig_path   ^((%%{_libdir}|%{_datadir})/%%{name}/pkgconfig/.*\.pc|%%{_bindir}/pkg-config)$
 %global nettle_checksum sha512/9a5b4c316222f22feb692106ceae299c2b59229ef96cac1739095c65c9ddee4b1d542579e5b49d4863bd6a8c093611f0fdd1c7cb3251844c85b7e089e406ffc5
 
 Name:           compat-nettle34
@@ -13,7 +12,7 @@ URL:            http://www.lysator.liu.se/~nisse/nettle/
 #Source0:        http://www.lysator.liu.se/~nisse/archive/%%{name}-%%{version}.tar.gz
 Source0:        https://src.fedoraproject.org/lookaside/pkgs/nettle/nettle-%{version}-hobbled.tar.xz/%{nettle_checksum}/nettle-%{version}-hobbled.tar.xz
 
-Patch0:		nettle-3.3-remove-ecc-testsuite.patch
+Patch0:		https://git.centos.org/rpms/nettle/raw/c8s/f/SOURCES/nettle-3.3-remove-ecc-testsuite.patch
 Patch1:		nettle-3.4.1-c99.patch
 
 BuildRequires:  gmp-devel
@@ -63,6 +62,7 @@ sed 's/ecc-224.c//g' -i Makefile.in
 %patch0 -p1
 %patch1 -p1
 
+
 %build
 autoreconf -ifv
 %configure --enable-shared --disable-arm-neon --enable-fat
@@ -70,12 +70,7 @@ autoreconf -ifv
 
 
 %install
-#mkdir -p %{buildroot}/etc/profile.d/
-#cat > %{buildroot}/etc/profile.d/%{name}.sh <<EOF
-#export export PKG_CONFIG_PATH=/usr/lib64/compat-nettle34/pkgconfig/
-#EOF
-
-make install DESTDIR=$RPM_BUILD_ROOT INSTALL="install -p"
+%make_install
 make install-shared DESTDIR=$RPM_BUILD_ROOT INSTALL="install -p"
 #mkdir -p $RPM_BUILD_ROOT%{_infodir}
 #install -p -m 644 nettle.info $RPM_BUILD_ROOT%{_infodir}/nettle-%{suffix_ver}.info
@@ -92,18 +87,6 @@ mv $RPM_BUILD_ROOT%{_bindir}/sexp-conv $RPM_BUILD_ROOT%{_bindir}/sexp-conv-%{suf
 mv $RPM_BUILD_ROOT%{_bindir}/nettle-hash $RPM_BUILD_ROOT%{_bindir}/nettle-hash-%{suffix_ver}
 mv $RPM_BUILD_ROOT%{_bindir}/nettle-pbkdf2 $RPM_BUILD_ROOT%{_bindir}/nettle-pbkdf2-%{suffix_ver}
 
-#mkdir -p $RPM_BUILD_ROOT%{_includedir}/%{name}
-#mv $RPM_BUILD_ROOT%{_includedir}/nettle $RPM_BUILD_ROOT%{_includedir}/%{name}/
-#mkdir -p $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
-#mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/nettle.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
-#mv $RPM_BUILD_ROOT%{_libdir}/pkgconfig/hogweed.pc $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/
-#sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/nettle.pc
-#sed -r -i 's#^(includedir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/hogweed.pc
-#rm $RPM_BUILD_ROOT%{_libdir}/libnettle.so
-#rm $RPM_BUILD_ROOT%{_libdir}/libhogweed.so
-#ln -s $RPM_BUILD_ROOT%{_libdir}/%{name}
-#sed -r -i 's#^(libdir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/nettle.pc
-#sed -r -i 's#^(libdir=.*)#\1/%{name}#' $RPM_BUILD_ROOT%{_libdir}/%{name}/pkgconfig/hogweed.pc
 
 %check
 make check
@@ -136,11 +119,8 @@ fi
 %files devel
 %doc descore.README nettle.html nettle.pdf
 %{_includedir}/nettle
-#dir %%{_libdir}/%%{name}
-#dir %%{_libdir}/%%{name}/pkgconfig
 %{_libdir}/pkgconfig/*.pc
 %{_libdir}/lib*.so
-#/etc/profile.d/%%{name}.sh
 
 
 %changelog
