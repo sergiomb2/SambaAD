@@ -1,3 +1,12 @@
+Newest method, using copr repo:
+
+copr-cli build sergiomb/SambaAD -r epel-7-x86_64 -r epel-7-ppc64le gmp-6.1.2/gmp-6.1.2-1.fc31.src.rpm compat-nettle37/compat-nettle37-3.7.3-1.fc34.src.rpm compat-gnutls37/compat-gnutls37-3.7.2-1.fc34.src.rpm
+
+rpmbuild -bs compat-nettle37.spec --define "_sourcedir ." --define "_srcrpmdir ." && mock -r epel-7-x86_64 -a https://download.copr.fedorainfracloud.org/results/sergiomb/SambaAD/epel-7-x86_64/ --rebuild ./compat-nettle37-3.7.3-1.fc34.src.rpm
+
+rpmbuild -bs compat-gnutls37.spec  --define "_sourcedir ." --define "_srcrpmdir ." && mock -r epel-7-x86_64 -a https://download.copr.fedorainfracloud.org/results/sergiomb/SambaAD/epel-7-x86_64/  --rebuild ./compat-gnutls37-3.7.2-1.fc34.src.rpm
+
+
 New method:
 
 cd compat-gnutls34
