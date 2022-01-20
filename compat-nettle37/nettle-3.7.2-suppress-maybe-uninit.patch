@@ -1,0 +1,40 @@
+From 952c2d890902782ee90b6ed273f1d8b4e95dbff1 Mon Sep 17 00:00:00 2001
+From: Daiki Ueno <dueno@redhat.com>
+Date: Sun, 21 Mar 2021 11:13:36 +0100
+Subject: [PATCH] nettle-benchmark: suppress -Wmaybe-uninitialized warnings
+
+---
+ examples/nettle-benchmark.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/examples/nettle-benchmark.c b/examples/nettle-benchmark.c
+index ca6346e0..518b947d 100644
+--- a/examples/nettle-benchmark.c
++++ b/examples/nettle-benchmark.c
+@@ -392,6 +392,7 @@ time_umac(void)
+ 
+   uint8_t key[16];
+ 
++  init_key(sizeof(key), key);
+   umac32_set_key (&ctx32, key);
+   info.ctx = &ctx32;
+   info.update = (nettle_hash_update_func *) umac32_update;
+@@ -434,6 +435,7 @@ time_cmac(void)
+ 
+   uint8_t key[16];
+ 
++  init_key(sizeof(key), key);
+   cmac_aes128_set_key (&ctx, key);
+   info.ctx = &ctx;
+   info.update = (nettle_hash_update_func *) cmac_aes128_update;
+@@ -451,6 +453,7 @@ time_poly1305_aes(void)
+   struct poly1305_aes_ctx ctx;
+   uint8_t key[32];
+ 
++  init_key(sizeof(key), key);
+   poly1305_aes_set_key (&ctx, key);
+   info.ctx = &ctx;
+   info.update = (nettle_hash_update_func *) poly1305_aes_update;
+-- 
+2.30.2
+

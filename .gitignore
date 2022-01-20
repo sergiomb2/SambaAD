@@ -1,3 +1,7 @@
 *.tar.xz
+*.tar.gz
+*.tar.bz2
 *.src.rpm
 *asc
+*dsc
+*xz.sig
