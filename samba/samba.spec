@@ -7,7 +7,7 @@
 %bcond_without clustering
 
 %define talloc_version 2.3.3
-%define tdb_version 1.4.5
+%define tdb_version 1.4.4
 %define tevent_version 0.11.0
 %define ldb_version 2.4.1
 
@@ -220,14 +220,15 @@ BuildRequires: krb5-server >= %{required_mit_krb5}
 %endif
 BuildRequires: bind
 BuildRequires: lmdb-devel
-#BuildRequires: ldb-tools >= %{ldb_version}
+#BuildRequires: ldb-tools >= %%{ldb_version}
+#BuildRequires: tdb-tools >= %%{tdb_version}
 # Stop requiring this for RHEL compatibility
-#BuildRequires: python%{python3_pkgversion}-gpg
+#BuildRequires: python%%{python3_pkgversion}-gpg
 BuildRequires: python%{python3_pkgversion}-markdown
 BuildRequires: python%{python3_pkgversion}-setproctitle
 BuildRequires: python%{python3_pkgversion}-cryptography
-#BuildRequires: tdb-tools >= %{tdb_version}
 %endif
+
 BuildRequires: pkgconfig(gnutls) >= 3.6.8
 BuildRequires: pkgconfig(nettle) >= 3.4.1
 BuildRequires: pkgconfig(hogweed) >= 3.4.1
@@ -417,7 +418,7 @@ Requires: bind
 %description dc-bind-dlz
 The %{name}-dc-bind-dlz package contains the libraries for bind to manage all
 name server related details of Samba AD.
-%endif # with_dc
+%endif
 
 ### DEVEL
 %package devel
@@ -509,7 +510,7 @@ Requires: libsmbclient = %{samba_depver}
 The libsmbclient-devel package contains the header files and libraries needed
 to develop programs that link against the SMB client library in the Samba
 suite.
-%endif # with_libsmbclient
+%endif
 
 ### LIBWBCLIENT
 %if %with_libwbclient
@@ -531,7 +532,7 @@ Obsoletes: samba-winbind-devel < %{samba_depver}
 %description -n libwbclient-devel
 The libwbclient-devel package provides developer tools for the wbclient
 library.
-%endif # with_libwbclient
+%endif
 
 ### PYTHON
 %package -n python%{python3_pkgversion}-%{name}
@@ -1179,7 +1180,7 @@ else
     %{_sbindir}/update-alternatives --remove libwbclient.so%{libwbc_alternatives_suffix} %{_libdir}/samba/wbclient/libwbclient.so
 fi
 
-%endif # with_libwbclient
+%endif
 
 %post test -p /sbin/ldconfig
 
@@ -1249,50 +1250,8 @@ fi
 %dir %{_libdir}/samba/auth
 #{_libdir}/samba/auth/script.so
 %{_libdir}/samba/auth/unix.so
-%dir %{_libdir}/samba/vfs
-%{_libdir}/samba/vfs/acl_tdb.so
-%{_libdir}/samba/vfs/acl_xattr.so
-%{_libdir}/samba/vfs/aio_fork.so
-%{_libdir}/samba/vfs/aio_pthread.so
-%{_libdir}/samba/vfs/audit.so
-%{_libdir}/samba/vfs/btrfs.so
-%{_libdir}/samba/vfs/cap.so
-%{_libdir}/samba/vfs/catia.so
-%{_libdir}/samba/vfs/commit.so
-%{_libdir}/samba/vfs/crossrename.so
-%{_libdir}/samba/vfs/default_quota.so
-%if %{with_dc}
-%{_libdir}/samba/vfs/dfs_samba4.so
-%endif
-%{_libdir}/samba/vfs/dirsort.so
-%{_libdir}/samba/vfs/expand_msdfs.so
-%{_libdir}/samba/vfs/extd_audit.so
-%{_libdir}/samba/vfs/fake_perms.so
-%{_libdir}/samba/vfs/fileid.so
-%{_libdir}/samba/vfs/fruit.so
-%{_libdir}/samba/vfs/full_audit.so
-%{_libdir}/samba/vfs/linux_xfs_sgid.so
-%{_libdir}/samba/vfs/media_harmony.so
-#{_libdir}/samba/vfs/netatalk.so
-%{_libdir}/samba/vfs/offline.so
-%{_libdir}/samba/vfs/preopen.so
-%{_libdir}/samba/vfs/readahead.so
-%{_libdir}/samba/vfs/readonly.so
-%{_libdir}/samba/vfs/recycle.so
-%{_libdir}/samba/vfs/shadow_copy.so
-%{_libdir}/samba/vfs/shadow_copy2.so
-%{_libdir}/samba/vfs/shell_snap.so
-%{_libdir}/samba/vfs/snapper.so
-%{_libdir}/samba/vfs/streams_depot.so
-%{_libdir}/samba/vfs/streams_xattr.so
-%{_libdir}/samba/vfs/syncops.so
-%{_libdir}/samba/vfs/time_audit.so
-%{_libdir}/samba/vfs/unityed_media.so
-%{_libdir}/samba/vfs/virusfilter.so
-%{_libdir}/samba/vfs/worm.so
-%{_libdir}/samba/vfs/xattr_tdb.so
-%{_libdir}/samba/vfs/glusterfs_fuse.so
-
+%{_libdir}/samba/vfs
+%{_libexecdir}/samba/samba-bgqd
 %{_unitdir}/nmb.service
 %{_unitdir}/smb.service
 %attr(1777,root,root) %dir /var/spool/samba
@@ -1301,46 +1260,10 @@ fi
 %config(noreplace) %{_sysconfdir}/pam.d/samba
 %{_mandir}/man1/smbstatus.1*
 %{_mandir}/man8/eventlogadm.8*
+%{_mandir}/man8/samba-bgqd.8*
 %{_mandir}/man8/smbd.8*
 %{_mandir}/man8/nmbd.8*
-%{_mandir}/man8/vfs_acl_tdb.8*
-%{_mandir}/man8/vfs_acl_xattr.8*
-%{_mandir}/man8/vfs_aio_fork.8*
-%{_mandir}/man8/vfs_aio_pthread.8*
-%{_mandir}/man8/vfs_audit.8*
-%{_mandir}/man8/vfs_btrfs.8*
-%{_mandir}/man8/vfs_cap.8*
-%{_mandir}/man8/vfs_catia.8*
-%{_mandir}/man8/vfs_commit.8*
-%{_mandir}/man8/vfs_crossrename.8*
-%{_mandir}/man8/vfs_default_quota.8*
-%{_mandir}/man8/vfs_dirsort.8*
-%{_mandir}/man8/vfs_extd_audit.8*
-%{_mandir}/man8/vfs_fake_perms.8*
-%{_mandir}/man8/vfs_fileid.8*
-%{_mandir}/man8/vfs_fruit.8*
-%{_mandir}/man8/vfs_full_audit.8*
-%{_mandir}/man8/vfs_linux_xfs_sgid.8*
-%{_mandir}/man8/vfs_media_harmony.8*
-#{_mandir}/man8/vfs_netatalk.8*
-%{_mandir}/man8/vfs_offline.8*
-%{_mandir}/man8/vfs_preopen.8*
-%{_mandir}/man8/vfs_readahead.8*
-%{_mandir}/man8/vfs_readonly.8*
-%{_mandir}/man8/vfs_recycle.8*
-%{_mandir}/man8/vfs_shadow_copy.8*
-%{_mandir}/man8/vfs_shadow_copy2.8*
-%{_mandir}/man8/vfs_shell_snap.8*
-%{_mandir}/man8/vfs_snapper.8*
-%{_mandir}/man8/vfs_streams_depot.8*
-%{_mandir}/man8/vfs_streams_xattr.8*
-%{_mandir}/man8/vfs_syncops.8*
-%{_mandir}/man8/vfs_time_audit.8*
-%{_mandir}/man8/vfs_unityed_media.8*
-%{_mandir}/man8/vfs_virusfilter.8*
-%{_mandir}/man8/vfs_worm.8*
-%{_mandir}/man8/vfs_xattr_tdb.8*
-%{_mandir}/man8/vfs_glusterfs_fuse.8*
+%{_mandir}/man8/vfs_*.8*
 %attr(775,root,printadmin) %dir /var/lib/samba/drivers
 
 ### CLIENT
@@ -1349,7 +1272,6 @@ fi
 %{_bindir}/cifsdd
 %{_bindir}/dbwrap_tool
 %{_bindir}/dumpmscat
-#{_bindir}/findsmb
 %{_bindir}/mvxattr
 %{_bindir}/mdsearch
 %{_bindir}/nmblookup
@@ -1378,8 +1300,8 @@ fi
 %{_mandir}/man1/regpatch.1*
 %{_mandir}/man1/regshell.1*
 %{_mandir}/man1/regtree.1*
-#{_mandir}/man1/findsmb.1*
 %{_mandir}/man1/log2pcap.1*
+%{_mandir}/man1/mdsearch.1*
 %{_mandir}/man1/mvxattr.1*
 %{_mandir}/man1/rpcclient.1*
 %{_mandir}/man1/sharesec.1*
@@ -1478,12 +1400,14 @@ fi
 %{_libdir}/samba/libcommon-auth-samba4.so
 %{_libdir}/samba/libctdb-event-client-samba4.so
 %{_libdir}/samba/libdbwrap-samba4.so
+%{_libdir}/samba/libdcerpc-pkt-auth-samba4.so
 %{_libdir}/samba/libdcerpc-samba-samba4.so
 %{_libdir}/samba/libevents-samba4.so
 %{_libdir}/samba/libflag-mapping-samba4.so
 %{_libdir}/samba/libgenrand-samba4.so
 %{_libdir}/samba/libgensec-samba4.so
 %{_libdir}/samba/libgpext-samba4.so
+%{_libdir}/samba/libgpo-samba4.so
 %{_libdir}/samba/libgse-samba4.so
 %{_libdir}/samba/libhttp-samba4.so
 %{_libdir}/samba/libinterfaces-samba4.so
@@ -1495,10 +1419,7 @@ fi
 %{_libdir}/samba/liblibsmb-samba4.so
 %{_libdir}/samba/libmessages-dgm-samba4.so
 %{_libdir}/samba/libmessages-util-samba4.so
-%if 0%{?fedora} > 0
-# Unclear why this is not on RHEL,
 %{_libdir}/samba/libmscat-samba4.so
-%endif
 %{_libdir}/samba/libmsghdr-samba4.so
 %{_libdir}/samba/libmsrpc3-samba4.so
 %{_libdir}/samba/libndr-samba-samba4.so
@@ -1507,6 +1428,7 @@ fi
 %{_libdir}/samba/libnetif-samba4.so
 %{_libdir}/samba/libnpa-tstream-samba4.so
 %{_libdir}/samba/libposix-eadb-samba4.so
+%{_libdir}/samba/libprinter-driver-samba4.so
 %{_libdir}/samba/libprinting-migrate-samba4.so
 %{_libdir}/samba/libreplace-samba4.so
 %{_libdir}/samba/libregistry-samba4.so
@@ -1533,7 +1455,7 @@ fi
 %{_libdir}/samba/libtime-basic-samba4.so
 %{_libdir}/samba/libtorture-samba4.so
 %{_libdir}/samba/libtrusts-util-samba4.so
-#{_libdir}/samba/libutil-cmdline-samba4.so
+%{_libdir}/samba/libcmdline-samba4.so
 %{_libdir}/samba/libutil-reg-samba4.so
 %{_libdir}/samba/libutil-setid-samba4.so
 %{_libdir}/samba/libutil-tdb-samba4.so
@@ -1541,18 +1463,20 @@ fi
 %if ! %with_libwbclient
 %{_libdir}/samba/libwbclient.so.*
 %{_libdir}/samba/libwinbind-client-samba4.so
-%endif # ! with_libwbclient
+%endif
 
 %if ! %with_libsmbclient
 %{_libdir}/samba/libsmbclient.so.*
 %{_mandir}/man7/libsmbclient.7*
-%endif # ! with_libsmbclient
+%endif
 
 %if %{with_internal_talloc}
 %{_libdir}/samba/libtalloc.so.2
 %{_libdir}/samba/libtalloc.so.%{talloc_version}
 #{_libdir}/samba/libpytalloc-util.so.2
-#{_libdir}/samba/libpytalloc-util.so.%{talloc_version}
+%{_libdir}/samba/libpytalloc-util.cpython*.so.2
+%{_libdir}/samba/libpytalloc-util.cpython*.so.%{talloc_version}
+%{_libdir}/samba/libtalloc-report-printf-samba4.so
 %{_mandir}/man3/talloc.3.gz
 %endif
 
@@ -1563,14 +1487,14 @@ fi
 
 %if %{with_internal_tdb}
 %{_libdir}/samba/libtdb.so.1
-#{_libdir}/samba/libtdb.so.%{tdb_version}
+%{_libdir}/samba/libtdb.so.%{tdb_version}
 %endif
 
 %if %{with_internal_ldb}
-#{_libdir}/samba/libldb.so.1
+%{_libdir}/samba/libldb.so.2
 %{_libdir}/samba/libldb.so.%{ldb_version}
-#{_libdir}/samba/libpyldb-util.so.1
-#{_libdir}/samba/libpyldb-util.so.%{ldb_version}
+%{_libdir}/samba/libpyldb-util.cpython*.so.2
+%{_libdir}/samba/libpyldb-util.cpython*.so.%{ldb_version}
 %{_mandir}/man3/ldb.3.gz
 %endif
 
@@ -1614,6 +1538,7 @@ fi
 %{_bindir}/net
 %{_bindir}/pdbedit
 %{_bindir}/profiles
+%{_bindir}/samba-tool
 %{_bindir}/smbcontrol
 %{_bindir}/smbpasswd
 %{_bindir}/testparm
@@ -1622,6 +1547,7 @@ fi
 %{_mandir}/man1/testparm.1*
 %{_mandir}/man8/net.8*
 %{_mandir}/man8/pdbedit.8*
+%{_mandir}/man8/samba-tool.8*
 %{_mandir}/man8/smbpasswd.8*
 
 ### DC
@@ -1629,8 +1555,8 @@ fi
 
 %if %{with_dc}
 %{_unitdir}/samba.service
-%{_bindir}/samba-tool
 %{_sbindir}/samba
+%{_sbindir}/samba_downgrade_db
 %{_sbindir}/samba_kcc
 %{_sbindir}/samba_dnsupdate
 %{_sbindir}/samba-gpupdate
@@ -1648,11 +1574,15 @@ fi
 %dir /var/lib/samba/sysvol
 %{_datadir}/samba/setup
 %{_mandir}/man8/samba.8*
+%{_mandir}/man8/samba_downgrade_db.8*
 %{_mandir}/man8/samba-gpupdate.8*
-%{_mandir}/man8/samba-tool.8*
-%else # with_dc
+%dir %{_datadir}/samba/admx
+%{_datadir}/samba/admx/samba.admx
+%dir %{_datadir}/samba/admx/en-US
+%{_datadir}/samba/admx/en-US/samba.adml
+%else
 %doc packaging/README.dc
-%endif # with_dc
+%endif
 
 ### DC-LIBS
 %files dc-libs
@@ -1685,18 +1615,18 @@ fi
 %{_libdir}/samba/libscavenge-dns-records-samba4.so
 %else
 %doc packaging/README.dc-libs
-%endif # with_dc
+%endif
 
 ### DC-BIND
 %if %{with_dc}
 %files dc-bind-dlz
 %dir %{_libdir}/samba/bind9
-#{_libdir}/samba/bind9/dlz_bind9.so
-#{_libdir}/samba/bind9/dlz_bind9_9.so
 %{_libdir}/samba/bind9/dlz_bind9_10.so
 %{_libdir}/samba/bind9/dlz_bind9_11.so
-#{_libdir}/samba/bilibsamba-policynd9/dlz_bind9_12.so
-%endif # with_dc
+%{_libdir}/samba/bind9/dlz_bind9_12.so
+%{_libdir}/samba/bind9/dlz_bind9_14.so
+%{_libdir}/samba/bind9/dlz_bind9_16.so
+%endif
 
 ### DEVEL
 %files devel
@@ -1805,11 +1735,15 @@ fi
 
 %if ! %with_libsmbclient
 %{_includedir}/samba-4.0/libsmbclient.h
-%endif # ! with_libsmbclient
+%endif
 
 %if ! %with_libwbclient
 %{_includedir}/samba-4.0/wbclient.h
-%endif # ! with_libwbclient
+%endif
+
+#PYTHON3 devel
+%{_libdir}/libsamba-policy.*.so
+%{_libdir}/pkgconfig/samba-policy.*.pc
 
 ### VFS-CEPHFS
 %if %{with_vfs_cephfs}
@@ -1889,7 +1823,7 @@ fi
 %{_libdir}/libsmbclient.so
 %{_libdir}/pkgconfig/smbclient.pc
 %{_mandir}/man7/libsmbclient.7*
-%endif # with_libsmbclient
+%endif
 
 ### LIBWBCLIENT
 %if %with_libwbclient
@@ -1902,77 +1836,125 @@ fi
 %{_includedir}/samba-4.0/wbclient.h
 %{_libdir}/samba/wbclient/libwbclient.so
 %{_libdir}/pkgconfig/wbclient.pc
-%endif # with_libwbclient
+%endif
 
 ### PIDL
 %files pidl
-%attr(755,root,root) %{_bindir}/pidl
-%dir %{perl_vendorlib}/Parse
-%{perl_vendorlib}/Parse/Pidl.pm
-%dir %{perl_vendorlib}/Parse/Pidl
-%{perl_vendorlib}/Parse/Pidl/CUtil.pm
-%{perl_vendorlib}/Parse/Pidl/Samba4.pm
-%{perl_vendorlib}/Parse/Pidl/Expr.pm
-%{perl_vendorlib}/Parse/Pidl/ODL.pm
-%{perl_vendorlib}/Parse/Pidl/Typelist.pm
-%{perl_vendorlib}/Parse/Pidl/IDL.pm
-%{perl_vendorlib}/Parse/Pidl/Compat.pm
-%dir %{perl_vendorlib}/Parse/Pidl/Wireshark
-%{perl_vendorlib}/Parse/Pidl/Wireshark/Conformance.pm
-%{perl_vendorlib}/Parse/Pidl/Wireshark/NDR.pm
-%{perl_vendorlib}/Parse/Pidl/Dump.pm
-%dir %{perl_vendorlib}/Parse/Pidl/Samba3
-%{perl_vendorlib}/Parse/Pidl/Samba3/ServerNDR.pm
-%{perl_vendorlib}/Parse/Pidl/Samba3/ClientNDR.pm
-%dir %{perl_vendorlib}/Parse/Pidl/Samba4
-%{perl_vendorlib}/Parse/Pidl/Samba4/Header.pm
-%dir %{perl_vendorlib}/Parse/Pidl/Samba4/COM
-%{perl_vendorlib}/Parse/Pidl/Samba4/COM/Header.pm
-%{perl_vendorlib}/Parse/Pidl/Samba4/COM/Proxy.pm
-%{perl_vendorlib}/Parse/Pidl/Samba4/COM/Stub.pm
-%{perl_vendorlib}/Parse/Pidl/Samba4/Python.pm
-%{perl_vendorlib}/Parse/Pidl/Samba4/Template.pm
-%dir %{perl_vendorlib}/Parse/Pidl/Samba4/NDR
-%{perl_vendorlib}/Parse/Pidl/Samba4/NDR/Server.pm
-%{perl_vendorlib}/Parse/Pidl/Samba4/NDR/Client.pm
-%{perl_vendorlib}/Parse/Pidl/Samba4/NDR/Parser.pm
-%{perl_vendorlib}/Parse/Pidl/Samba4/TDR.pm
-%{perl_vendorlib}/Parse/Pidl/NDR.pm
-%{perl_vendorlib}/Parse/Pidl/Util.pm
+%{_bindir}/pidl
+%{perl_vendorlib}/Parse
 %{_mandir}/man1/pidl*
 %{_mandir}/man3/Parse::Pidl*
 
 ### PYTHON3
 %files -n python%{python3_pkgversion}-%{name}
-%dir %{python3_sitearch}/samba
-%{python3_sitearch}/samba/__init__.py*
-%{python3_sitearch}/samba/colour.py*
-%{python3_sitearch}/samba/common.py*
-%{python3_sitearch}/samba/dbchecker.py*
-%{python3_sitearch}/samba/descriptor.py*
-%{python3_sitearch}/samba/drs_utils.py*
-%{python3_sitearch}/samba/getopt.py*
-%{python3_sitearch}/samba/graph.py*
-%{python3_sitearch}/samba/hostconfig.py*
-%{python3_sitearch}/samba/idmap.py*
-%{python3_sitearch}/samba/join.py*
-%{python3_sitearch}/samba/logger.py*
-%{python3_sitearch}/samba/mdb_util.py*
-%{python3_sitearch}/samba/ms_display_specifiers.py*
-%{python3_sitearch}/samba/ms_schema.py*
-%{python3_sitearch}/samba/ndr.py*
-%{python3_sitearch}/samba/ntacls.py*
-%{python3_sitearch}/samba/remove_dc.py*
-%{python3_sitearch}/samba/sd_utils.py*
-%{python3_sitearch}/samba/sites.py*
-%{python3_sitearch}/samba/subnets.py*
-%{python3_sitearch}/samba/upgrade.py*
-%{python3_sitearch}/samba/upgradehelpers.py*
-%{python3_sitearch}/samba/xattr.py*
-%{_libdir}/libsamba-policy.cpython*.so.*
-%{_libdir}/samba/libsamba-net.cpython*.so
-%{_libdir}/samba/libsamba-python.cpython*.so
+%dir %{python3_sitearch}/samba/
+%{python3_sitearch}/samba/__init__.py
+%dir %{python3_sitearch}/samba/__pycache__
+%{python3_sitearch}/samba/__pycache__/__init__.*.pyc
+%{python3_sitearch}/samba/__pycache__/auth_util.*.pyc
+%{python3_sitearch}/samba/__pycache__/colour.*.pyc
+%{python3_sitearch}/samba/__pycache__/common.*.pyc
+%{python3_sitearch}/samba/__pycache__/dbchecker.*.pyc
+%{python3_sitearch}/samba/__pycache__/descriptor.*.pyc
+%{python3_sitearch}/samba/__pycache__/dnsresolver.*.pyc
+%{python3_sitearch}/samba/__pycache__/drs_utils.*.pyc
+%{python3_sitearch}/samba/__pycache__/getopt.*.pyc
+%{python3_sitearch}/samba/__pycache__/gpclass.*.pyc
+%{python3_sitearch}/samba/__pycache__/gp_ext_loader.*.pyc
+%{python3_sitearch}/samba/__pycache__/gp_gnome_settings_ext.*.pyc
+%{python3_sitearch}/samba/__pycache__/gp_msgs_ext.*.pyc
+%{python3_sitearch}/samba/__pycache__/gp_scripts_ext.*.pyc
+%{python3_sitearch}/samba/__pycache__/gp_sec_ext.*.pyc
+%{python3_sitearch}/samba/__pycache__/gp_smb_conf_ext.*.pyc
+%{python3_sitearch}/samba/__pycache__/gp_sudoers_ext.*.pyc
+%{python3_sitearch}/samba/__pycache__/graph.*.pyc
+%{python3_sitearch}/samba/__pycache__/hostconfig.*.pyc
+%{python3_sitearch}/samba/__pycache__/idmap.*.pyc
+%{python3_sitearch}/samba/__pycache__/join.*.pyc
+%{python3_sitearch}/samba/__pycache__/logger.*.pyc
+%{python3_sitearch}/samba/__pycache__/mdb_util.*.pyc
+%{python3_sitearch}/samba/__pycache__/ms_display_specifiers.*.pyc
+%{python3_sitearch}/samba/__pycache__/ms_schema.*.pyc
+%{python3_sitearch}/samba/__pycache__/ndr.*.pyc
+%{python3_sitearch}/samba/__pycache__/ntacls.*.pyc
+%{python3_sitearch}/samba/__pycache__/sd_utils.*.pyc
+%{python3_sitearch}/samba/__pycache__/sites.*.pyc
+%{python3_sitearch}/samba/__pycache__/subnets.*.pyc
+%{python3_sitearch}/samba/__pycache__/tdb_util.*.pyc
+%{python3_sitearch}/samba/__pycache__/trust_utils.*.pyc
+%{python3_sitearch}/samba/__pycache__/upgrade.*.pyc
+%{python3_sitearch}/samba/__pycache__/upgradehelpers.*.pyc
+%{python3_sitearch}/samba/__pycache__/vgp_access_ext.*.pyc
+%{python3_sitearch}/samba/__pycache__/vgp_files_ext.*.pyc
+%{python3_sitearch}/samba/__pycache__/vgp_issue_ext.*.pyc
+%{python3_sitearch}/samba/__pycache__/vgp_motd_ext.*.pyc
+%{python3_sitearch}/samba/__pycache__/vgp_openssh_ext.*.pyc
+%{python3_sitearch}/samba/__pycache__/vgp_startup_scripts_ext.*.pyc
+%{python3_sitearch}/samba/__pycache__/vgp_sudoers_ext.*.pyc
+%{python3_sitearch}/samba/__pycache__/vgp_symlink_ext.*.pyc
+%{python3_sitearch}/samba/__pycache__/xattr.*.pyc
+%{python3_sitearch}/samba/_glue.*.so
+%{python3_sitearch}/samba/_ldb.*.so
+%{python3_sitearch}/samba/auth.*.so
+%{python3_sitearch}/samba/auth_util.py
+%{python3_sitearch}/samba/dbchecker.py
+%{python3_sitearch}/samba/colour.py
+%{python3_sitearch}/samba/common.py
+%{python3_sitearch}/samba/credentials.*.so
+%{python3_sitearch}/samba/crypto.*.so
+%{python3_sitearch}/samba/descriptor.py
+%{python3_sitearch}/samba/dnsresolver.py
+%{python3_sitearch}/samba/drs_utils.py
+%{python3_sitearch}/samba/dsdb.*.so
+%{python3_sitearch}/samba/dsdb_dns.*.so
+%{python3_sitearch}/samba/gensec.*.so
+%{python3_sitearch}/samba/getopt.py
+%{python3_sitearch}/samba/gpclass.py
+%{python3_sitearch}/samba/gp_gnome_settings_ext.py
+%{python3_sitearch}/samba/gp_scripts_ext.py
+%{python3_sitearch}/samba/gp_sec_ext.py
+%{python3_sitearch}/samba/gpo.*.so
+%{python3_sitearch}/samba/graph.py
+%{python3_sitearch}/samba/hostconfig.py
+%{python3_sitearch}/samba/idmap.py
+%{python3_sitearch}/samba/join.py
+%{python3_sitearch}/samba/messaging.*.so
+%{python3_sitearch}/samba/ndr.py
+%{python3_sitearch}/samba/net.*.so
+%{python3_sitearch}/samba/net_s3.*.so
+%{python3_sitearch}/samba/ntstatus.*.so
+%{python3_sitearch}/samba/posix_eadb.*.so
+%{python3_sitearch}/samba/gp_ext_loader.py
+%{python3_sitearch}/samba/gp_msgs_ext.py
+%{python3_sitearch}/samba/gp_smb_conf_ext.py
+%{python3_sitearch}/samba/gp_sudoers_ext.py
+%{python3_sitearch}/samba/logger.py
+%{python3_sitearch}/samba/mdb_util.py
+%{python3_sitearch}/samba/ms_display_specifiers.py
+%{python3_sitearch}/samba/ms_schema.py
+%{python3_sitearch}/samba/netbios.*.so
+%{python3_sitearch}/samba/ntacls.py
+%{python3_sitearch}/samba/param.*.so
+%{python3_sitearch}/samba/policy.*.so
+%{python3_sitearch}/samba/registry.*.so
+%{python3_sitearch}/samba/security.*.so
+%{python3_sitearch}/samba/sd_utils.py
+%{python3_sitearch}/samba/sites.py
+%{python3_sitearch}/samba/subnets.py
+%{python3_sitearch}/samba/tdb_util.py
+%{python3_sitearch}/samba/trust_utils.py
+%{python3_sitearch}/samba/upgrade.py
+%{python3_sitearch}/samba/upgradehelpers.py
+%{python3_sitearch}/samba/vgp_access_ext.py
+%{python3_sitearch}/samba/vgp_files_ext.py
+%{python3_sitearch}/samba/vgp_issue_ext.py
+%{python3_sitearch}/samba/vgp_motd_ext.py
+%{python3_sitearch}/samba/vgp_openssh_ext.py
+%{python3_sitearch}/samba/vgp_startup_scripts_ext.py
+%{python3_sitearch}/samba/vgp_sudoers_ext.py
+%{python3_sitearch}/samba/vgp_symlink_ext.py
 %{python3_sitearch}/samba/werror.*.so
+%{python3_sitearch}/samba/xattr.py
 %{python3_sitearch}/samba/xattr_native.*.so
 %{python3_sitearch}/samba/xattr_tdb.*.so
 %{_libdir}/libsamba-policy.cpython*.so.*
@@ -1984,19 +1966,26 @@ fi
 %{python3_sitearch}/samba/netcmd/
 %{python3_sitearch}/samba/samba3/
 %{python3_sitearch}/samba/subunit/
-%{python3_sitearch}/samba/tdb_util.py*
 
 %if %{with_internal_tevent}
-%{python3_sitearch}/tevent.*
+%{python3_sitearch}/tevent.py
+%{python3_sitearch}/_tevent.cpython*.so
+%{python3_sitearch}/__pycache__/tevent*.pyc
 %endif
 %if %{with_internal_ldb}
-%{python3_sitearch}/_ldb_text.*
+%{python3_sitearch}/_ldb_text.py
+%{python3_sitearch}/ldb.cpython*.so
+%{python3_sitearch}/__pycache__/_ldb_text*.pyc
 %endif
 %if %{with_internal_tdb}
-%{python3_sitearch}/_tdb_text.*
+%{python3_sitearch}/_tdb_text.py
+%{python3_sitearch}/tdb.cpython*.so
+%{python3_sitearch}/__pycache__/_tdb_text*.pyc
 %endif
 %if %{with_internal_talloc}
+%{python3_sitearch}/talloc.cpython*.so
 %endif
+
 
 %if %{with_dc}
 %files -n python%{python3_pkgversion}-%{name}-dc
@@ -2058,7 +2047,7 @@ fi
 #{python3_sitearch}/samba/gpclass.py*
 #{python3_sitearch}/samba/uptodateness.py*
 #{python3_sitearch}/samba/gp_ext_loader.py*
-#{python3_sitearch}/samba/gp_parse/
+%{python3_sitearch}/samba/gp_parse/
 #{python3_sitearch}/samba/gp_sec_ext.py*
 
 %endif
@@ -2123,6 +2112,8 @@ fi
 %files winbind-krb5-locator
 %ghost %{_libdir}/krb5/plugins/libkrb5/winbind_krb5_locator.so
 %{_libdir}/samba/krb5/winbind_krb5_locator.so
+# correct rpm package?
+%{_libdir}/samba/krb5/async_dns_krb5_locator.so
 %{_mandir}/man8/winbind_krb5_locator.8*
 
 ### WINBIND-MODULES
@@ -2207,7 +2198,7 @@ fi
 %{_datadir}/ctdb/tests/
 %endif
 
-%endif # with_clustering_support
+%endif
 
 %changelog
 * Mon Jan 24 2022 Sérgio Basto <sergio@serjux.com> - 3:4.15.4-1
