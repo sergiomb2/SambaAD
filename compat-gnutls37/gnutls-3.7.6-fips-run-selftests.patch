@@ -1,0 +1,640 @@
+From 036fb360e5775f01ef25f5e712024a29930c462e Mon Sep 17 00:00:00 2001
+From: Daiki Ueno <ueno@gnu.org>
+Date: Fri, 3 Jun 2022 15:43:00 +0900
+Subject: [PATCH] fips: provide function to manually run FIPS self-tests
+
+FIPS140-3 IG 10.3.E Periodic Self-Testing says:
+
+  At security levels 1 and 2, acceptable means for initiating the
+  periodic self-tests include a provided service, resetting, rebooting
+  or power cycling.
+
+Neither resetting, rebooting, nor power-cycling is suitable because
+those involve operations outside of the module.  Therefore this patch
+adds a new API to manually run the substance of FIPS140 self-tests.
+
+Suggeested by Richard Costa and Stephan Mueller in:
+https://gitlab.com/gnutls/gnutls/-/issues/1364
+
+Signed-off-by: Daiki Ueno <ueno@gnu.org>
+---
+ NEWS                            |   5 ++
+ devel/libgnutls.abignore        |   2 +
+ devel/symbols.last              |   2 +
+ doc/Makefile.am                 |   2 +
+ doc/manpages/Makefile.am        |   1 +
+ lib/fips.c                      | 139 ++++++++++++++++----------------
+ lib/global.c                    |  14 +++-
+ lib/includes/gnutls/gnutls.h.in |   2 +
+ lib/libgnutls.map               |   8 ++
+ tests/fips-test.c               |   7 ++
+ 10 files changed, 110 insertions(+), 72 deletions(-)
+
+diff --git a/NEWS b/NEWS
+index 70dd8a12b5..389be8acaa 100644
+--- a/NEWS
++++ b/NEWS
+@@ -5,6 +5,11 @@ Copyright (C) 2000-2016 Free Software Foundation, Inc.
+ Copyright (C) 2013-2019 Nikos Mavrogiannopoulos
+ See the end for copying conditions.
+ 
++* Version 3.7.7 (unreleased)
++
++** API and ABI modifications:
++gnutls_fips140_run_self_tests: New function
++
+ * Version 3.7.6 (released 2022-05-27)
+ 
+ ** libgnutls: Fixed invalid write when gnutls_realloc_zero()
+diff --git a/doc/Makefile.am b/doc/Makefile.am
+index d20a021d97..34ef43866c 100644
+--- a/doc/Makefile.am
++++ b/doc/Makefile.am
+@@ -1096,6 +1096,8 @@ FUNCS += functions/gnutls_fips140_pop_context
+ FUNCS += functions/gnutls_fips140_pop_context.short
+ FUNCS += functions/gnutls_fips140_push_context
+ FUNCS += functions/gnutls_fips140_push_context.short
++FUNCS += functions/gnutls_fips140_run_self_tests
++FUNCS += functions/gnutls_fips140_run_self_tests.short
+ FUNCS += functions/gnutls_fips140_set_mode
+ FUNCS += functions/gnutls_fips140_set_mode.short
+ FUNCS += functions/gnutls_get_library_config
+diff --git a/doc/manpages/Makefile.am b/doc/manpages/Makefile.am
+index d8c5f2854d..90906b0574 100644
+--- a/doc/manpages/Makefile.am
++++ b/doc/manpages/Makefile.am
+@@ -380,6 +380,7 @@ APIMANS += gnutls_fips140_get_operation_state.3
+ APIMANS += gnutls_fips140_mode_enabled.3
+ APIMANS += gnutls_fips140_pop_context.3
+ APIMANS += gnutls_fips140_push_context.3
++APIMANS += gnutls_fips140_run_self_tests.3
+ APIMANS += gnutls_fips140_set_mode.3
+ APIMANS += gnutls_get_library_config.3
+ APIMANS += gnutls_get_system_config_file.3
+diff --git a/lib/fips.c b/lib/fips.c
+index e9c27f6df6..656d43e74a 100644
+--- a/lib/fips.c
++++ b/lib/fips.c
+@@ -419,8 +419,6 @@ int _gnutls_fips_perform_self_checks1(void)
+ {
+ 	int ret;
+ 
+-	_gnutls_switch_lib_state(LIB_STATE_SELFTEST);
+-
+ 	/* Tests the FIPS algorithms used by nettle internally.
+ 	 * In our case we test AES-CBC since nettle's AES is used by
+ 	 * the DRBG-AES.
+@@ -429,193 +427,153 @@ int _gnutls_fips_perform_self_checks1(void)
+ 	/* ciphers - one test per cipher */
+ 	ret = gnutls_cipher_self_test(0, GNUTLS_CIPHER_AES_128_CBC);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	return 0;
+-
+-error:
+-	_gnutls_switch_lib_state(LIB_STATE_ERROR);
+-	_gnutls_audit_log(NULL, "FIPS140-2 self testing part1 failed\n");
+-
+-	return GNUTLS_E_SELF_TEST_ERROR;
+ }
+ 
+ int _gnutls_fips_perform_self_checks2(void)
+ {
+ 	int ret;
+ 
+-	_gnutls_switch_lib_state(LIB_STATE_SELFTEST);
+-
+ 	/* Tests the FIPS algorithms */
+ 
+ 	/* ciphers - one test per cipher */
+ 	ret = gnutls_cipher_self_test(0, GNUTLS_CIPHER_3DES_CBC);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	ret = gnutls_cipher_self_test(0, GNUTLS_CIPHER_AES_256_CBC);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	ret = gnutls_cipher_self_test(0, GNUTLS_CIPHER_AES_256_GCM);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	ret = gnutls_cipher_self_test(0, GNUTLS_CIPHER_AES_256_XTS);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	ret = gnutls_cipher_self_test(0, GNUTLS_CIPHER_AES_256_CFB8);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	/* Digest tests */
+ 	ret = gnutls_digest_self_test(0, GNUTLS_DIG_SHA3_224);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	ret = gnutls_digest_self_test(0, GNUTLS_DIG_SHA3_256);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	ret = gnutls_digest_self_test(0, GNUTLS_DIG_SHA3_384);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	ret = gnutls_digest_self_test(0, GNUTLS_DIG_SHA3_512);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	/* MAC (includes message digest test) */
+ 	ret = gnutls_mac_self_test(0, GNUTLS_MAC_SHA1);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	ret = gnutls_mac_self_test(0, GNUTLS_MAC_SHA224);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	ret = gnutls_mac_self_test(0, GNUTLS_MAC_SHA256);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	ret = gnutls_mac_self_test(0, GNUTLS_MAC_SHA384);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	ret = gnutls_mac_self_test(0, GNUTLS_MAC_SHA512);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	ret = gnutls_mac_self_test(0, GNUTLS_MAC_AES_CMAC_256);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	/* PK */
+ 	ret = gnutls_pk_self_test(0, GNUTLS_PK_RSA);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	ret = gnutls_pk_self_test(0, GNUTLS_PK_DSA);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	ret = gnutls_pk_self_test(0, GNUTLS_PK_EC);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	ret = gnutls_pk_self_test(0, GNUTLS_PK_DH);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	/* HKDF */
+ 	ret = gnutls_hkdf_self_test(0, GNUTLS_MAC_SHA256);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	/* PBKDF2 */
+ 	ret = gnutls_pbkdf2_self_test(0, GNUTLS_MAC_SHA256);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	/* TLS-PRF */
+ 	ret = gnutls_tlsprf_self_test(0, GNUTLS_MAC_SHA256);
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	if (_gnutls_rnd_ops.self_test == NULL) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	/* this does not require rng initialization */
+ 	ret = _gnutls_rnd_ops.self_test();
+ 	if (ret < 0) {
+-		gnutls_assert();
+-		goto error;
++		return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 	}
+ 
+ 	if (_skip_integrity_checks == 0) {
+ 		ret = check_binary_integrity();
+ 		if (ret < 0) {
+-			gnutls_assert();
+-			goto error;
++			return gnutls_assert_val(GNUTLS_E_SELF_TEST_ERROR);
+ 		}
+ 	}
+ 
+ 	return 0;
+-
+-error:
+-	_gnutls_switch_lib_state(LIB_STATE_ERROR);
+-	_gnutls_audit_log(NULL, "FIPS140-2 self testing part 2 failed\n");
+-
+-	return GNUTLS_E_SELF_TEST_ERROR;
+ }
+ #endif
+ 
+@@ -894,3 +852,48 @@ _gnutls_switch_fips_state(gnutls_fips140_operation_state_t state)
+ 	(void)state;
+ #endif
+ }
++
++/**
++ * gnutls_fips140_run_self_tests:
++ *
++ * Manually perform the second round of the FIPS140 self-tests,
++ * including:
++ *
++ * - Known answer tests (KAT) for the selected set of symmetric
++ *   cipher, MAC, public key, KDF, and DRBG
++ * - Library integrity checks
++ *
++ * Upon failure with FIPS140 mode enabled, it makes the library
++ * unusable.  This function is not thread-safe.
++ *
++ * Returns: 0 upon success, a negative error code otherwise
++ *
++ * Since: 3.7.7
++ */
++int
++gnutls_fips140_run_self_tests(void)
++{
++#ifdef ENABLE_FIPS140
++	int ret;
++	unsigned prev_lib_state;
++
++	/* Temporarily switch to LIB_STATE_SELFTEST as some of the
++	 * algorithms are implemented using special constructs in
++	 * self-tests (such as deterministic variants) */
++	prev_lib_state = _gnutls_get_lib_state();
++	_gnutls_switch_lib_state(LIB_STATE_SELFTEST);
++
++	ret = _gnutls_fips_perform_self_checks2();
++	if (gnutls_fips140_mode_enabled() != GNUTLS_FIPS140_DISABLED &&
++	    ret < 0) {
++		_gnutls_switch_lib_state(LIB_STATE_ERROR);
++		_gnutls_audit_log(NULL, "FIPS140-2 self testing part 2 failed\n");
++	} else {
++		/* Restore the previous library state */
++		_gnutls_switch_lib_state(prev_lib_state);
++	}
++	return ret;
++#else
++	return 0;
++#endif
++}
+diff --git a/lib/global.c b/lib/global.c
+index faa7f0afb2..1b372c15bd 100644
+--- a/lib/global.c
++++ b/lib/global.c
+@@ -336,9 +336,12 @@ static int _gnutls_global_init(unsigned constructor)
+ 
+ 		/* first round of self checks, these are done on the
+ 		 * nettle algorithms which are used internally */
++		_gnutls_switch_lib_state(LIB_STATE_SELFTEST);
+ 		ret = _gnutls_fips_perform_self_checks1();
+-		if (res != 2) {
+-			if (ret < 0) {
++		if (ret < 0) {
++			_gnutls_switch_lib_state(LIB_STATE_ERROR);
++			_gnutls_audit_log(NULL, "FIPS140-2 self testing part1 failed\n");
++			if (res != 2) {
+ 				gnutls_assert();
+ 				goto out;
+ 			}
+@@ -355,9 +358,12 @@ static int _gnutls_global_init(unsigned constructor)
+ 	 * (e.g., AESNI overridden AES). They are after _gnutls_register_accel_crypto()
+ 	 * intentionally */
+ 	if (res != 0) {
++		_gnutls_switch_lib_state(LIB_STATE_SELFTEST);
+ 		ret = _gnutls_fips_perform_self_checks2();
+-		if (res != 2) {
+-			if (ret < 0) {
++		if (ret < 0) {
++			_gnutls_switch_lib_state(LIB_STATE_ERROR);
++			_gnutls_audit_log(NULL, "FIPS140-2 self testing part 2 failed\n");
++			if (res != 2) {
+ 				gnutls_assert();
+ 				goto out;
+ 			}
+diff --git a/lib/includes/gnutls/gnutls.h.in b/lib/includes/gnutls/gnutls.h.in
+index f7fc5d114a..5840f331e9 100644
+--- a/lib/includes/gnutls/gnutls.h.in
++++ b/lib/includes/gnutls/gnutls.h.in
+@@ -3416,6 +3416,8 @@ gnutls_fips140_get_operation_state(gnutls_fips140_context_t context);
+ int gnutls_fips140_push_context(gnutls_fips140_context_t context);
+ int gnutls_fips140_pop_context(void);
+ 
++int gnutls_fips140_run_self_tests(void);
++
+   /* Gnutls error codes. The mapping to a TLS alert is also shown in
+    * comments.
+    */
+diff --git a/lib/libgnutls.map b/lib/libgnutls.map
+index 0241946c8a..f42d5f9fae 100644
+--- a/lib/libgnutls.map
++++ b/lib/libgnutls.map
+@@ -1399,6 +1399,14 @@ GNUTLS_3_7_5
+ 	*;
+ } GNUTLS_3_7_4;
+ 
++GNUTLS_3_7_7
++{
++ global:
++	gnutls_fips140_run_self_tests;
++ local:
++	*;
++} GNUTLS_3_7_5;
++
+ GNUTLS_FIPS140_3_4 {
+   global:
+ 	gnutls_cipher_self_test;
+diff --git a/tests/fips-test.c b/tests/fips-test.c
+index a6a283fa67..31a5e26111 100644
+--- a/tests/fips-test.c
++++ b/tests/fips-test.c
+@@ -525,6 +525,13 @@ void doit(void)
+ 	}
+ 
+ 	gnutls_fips140_context_deinit(fips_context);
++
++	/* run self-tests manually */
++	ret = gnutls_fips140_run_self_tests();
++	if (ret < 0) {
++		fail("gnutls_fips140_run_self_tests failed\n");
++	}
++
+ 	gnutls_global_deinit();
+ 	return;
+ }
+-- 
+2.36.1
+
+From 354027c0c09db60d3083fa48ae791046d336957b Mon Sep 17 00:00:00 2001
+From: Alexander Sosedkin <asosedkin@redhat.com>
+Date: Tue, 28 Jun 2022 17:22:36 +0200
+Subject: [PATCH] tests/fips-test: minor extension
+
+Signed-off-by: Alexander Sosedkin <asosedkin@redhat.com>
+---
+ tests/fips-test.c | 36 +++++++++++++++++++++++++++---------
+ 1 file changed, 27 insertions(+), 9 deletions(-)
+
+diff --git a/tests/fips-test.c b/tests/fips-test.c
+index 31a5e26111..f9bd34586a 100644
+--- a/tests/fips-test.c
++++ b/tests/fips-test.c
+@@ -427,34 +427,43 @@ void doit(void)
+ 	rsa_import_keypair(&privkey, &pubkey, "rsa-2432.pem");
+ 	FIPS_POP_CONTEXT(INITIAL);
+ 
+-	/* Create a signature with SHA256; approved */
++	/* Create a signature with 2432-bit RSA and SHA256; approved */
+ 	FIPS_PUSH_CONTEXT();
+ 	ret = gnutls_privkey_sign_data(privkey, GNUTLS_DIG_SHA256, 0,
+ 				       &data, &signature);
+ 	if (ret < 0) {
+ 		fail("gnutls_privkey_sign_data failed\n");
+ 	}
+-	gnutls_free(signature.data);
+ 	FIPS_POP_CONTEXT(APPROVED);
+ 
+-	/* Create a signature with SHA-1; not approved */
++	/* Verify a signature with 2432-bit RSA and SHA256; approved */
++	FIPS_PUSH_CONTEXT();
++	ret = gnutls_pubkey_verify_data2(pubkey, GNUTLS_SIGN_RSA_SHA256, 0,
++	                                 &data, &signature);
++	if (ret < 0) {
++		fail("gnutls_pubkey_verify_data2 failed\n");
++	}
++	FIPS_POP_CONTEXT(APPROVED);
++	gnutls_free(signature.data);
++
++	/* Create a signature with 2432-bit RSA and SHA-1; not approved */
+ 	FIPS_PUSH_CONTEXT();
+ 	ret = gnutls_privkey_sign_data(privkey, GNUTLS_DIG_SHA1, 0,
+ 				       &data, &signature);
+ 	if (ret < 0) {
+ 		fail("gnutls_privkey_sign_data failed\n");
+ 	}
+-	gnutls_free(signature.data);
+ 	FIPS_POP_CONTEXT(NOT_APPROVED);
+ 
+-	/* Verify a signature created with SHA-1; approved */
++	/* Verify a signature created with 2432-bit RSA and SHA-1; approved */
+ 	FIPS_PUSH_CONTEXT();
+-	ret = gnutls_pubkey_verify_data2(pubkey, GNUTLS_SIGN_RSA_SHA1, 0, &data,
+-					 &rsa2342_sha1_sig);
++	ret = gnutls_pubkey_verify_data2(pubkey, GNUTLS_SIGN_RSA_SHA1, 0,
++	                                 &data, &rsa2342_sha1_sig);
+ 	if (ret < 0) {
+ 		fail("gnutls_pubkey_verify_data2 failed\n");
+ 	}
+ 	FIPS_POP_CONTEXT(APPROVED);
++	gnutls_free(signature.data);
+ 	gnutls_pubkey_deinit(pubkey);
+ 	gnutls_privkey_deinit(privkey);
+ 
+@@ -463,15 +472,24 @@ void doit(void)
+ 	rsa_import_keypair(&privkey, &pubkey, "rsa-512.pem");
+ 	FIPS_POP_CONTEXT(INITIAL);
+ 
+-	/* Create a signature; not approved */
++	/* Create a signature with 512-bit RSA and SHA256; not approved */
+ 	FIPS_PUSH_CONTEXT();
+ 	ret = gnutls_privkey_sign_data(privkey, GNUTLS_DIG_SHA256, 0,
+ 				       &data, &signature);
+ 	if (ret < 0) {
+ 		fail("gnutls_privkey_sign_data failed\n");
+ 	}
+-	gnutls_free(signature.data);
+ 	FIPS_POP_CONTEXT(NOT_APPROVED);
++
++	/* Verify a signature with 512-bit RSA and SHA256; not approved */
++	FIPS_PUSH_CONTEXT();
++	ret = gnutls_pubkey_verify_data2(pubkey, GNUTLS_SIGN_RSA_SHA256, 0,
++	                                 &data, &signature);
++	if (ret < 0) {
++		fail("gnutls_pubkey_verify_data2 failed\n");
++	}
++	FIPS_POP_CONTEXT(NOT_APPROVED);
++	gnutls_free(signature.data);
+ 	gnutls_pubkey_deinit(pubkey);
+ 	gnutls_privkey_deinit(privkey);
+ 
+-- 
+2.37.3
+
+From 5a745120148861d873f47c1428c8c6dcadcf109b Mon Sep 17 00:00:00 2001
+From: Richard Costa <richard.costa@suse.com>
+Date: Sat, 9 Jul 2022 00:50:21 +0000
+Subject: [PATCH] Add self-test code inside a FIPS context
+
+Self-test code exercise lots of different FIPS-related code with
+side-effects. So, in order to prevent it from losing information when
+executing inside another context, we create an appropriated one.
+
+If the self-test fails, then the library is placed in error state, so it
+doesn't matter for other contexts.
+
+Signed-off-by: Richard Maciel Costa <richard.costa@suse.com>
+---
+ lib/fips.c        | 19 +++++++++++++++++++
+ tests/fips-test.c | 20 ++++++++++++--------
+ 2 files changed, 31 insertions(+), 8 deletions(-)
+
+diff --git a/lib/fips.c b/lib/fips.c
+index 31a52a990f..7d143e608e 100644
+--- a/lib/fips.c
++++ b/lib/fips.c
+@@ -902,6 +902,16 @@ gnutls_fips140_run_self_tests(void)
+ #ifdef ENABLE_FIPS140
+ 	int ret;
+ 	unsigned prev_lib_state;
++	gnutls_fips140_context_t fips_context = NULL;
++
++	/* Save the FIPS context, because self tests change it */
++	if (gnutls_fips140_mode_enabled() != GNUTLS_FIPS140_DISABLED) {
++		if (gnutls_fips140_context_init(&fips_context) < 0 ||
++		    gnutls_fips140_push_context(fips_context) < 0) {
++			gnutls_fips140_context_deinit(fips_context);
++			fips_context = NULL;
++		}
++	}
+ 
+ 	/* Temporarily switch to LIB_STATE_SELFTEST as some of the
+ 	 * algorithms are implemented using special constructs in
+@@ -918,6 +928,15 @@ gnutls_fips140_run_self_tests(void)
+ 		/* Restore the previous library state */
+ 		_gnutls_switch_lib_state(prev_lib_state);
+ 	}
++
++	/* Restore the previous FIPS context */
++	if (gnutls_fips140_mode_enabled() != GNUTLS_FIPS140_DISABLED && fips_context) {
++		if (gnutls_fips140_pop_context() < 0) {
++			_gnutls_switch_lib_state(LIB_STATE_ERROR);
++			_gnutls_audit_log(NULL, "FIPS140-2 context restoration failed\n");
++		}
++		gnutls_fips140_context_deinit(fips_context);
++	}
+ 	return ret;
+ #else
+ 	return 0;
+diff --git a/tests/fips-test.c b/tests/fips-test.c
+index f9bd34586a..475b739197 100644
+--- a/tests/fips-test.c
++++ b/tests/fips-test.c
+@@ -457,8 +457,9 @@ void doit(void)
+ 
+ 	/* Verify a signature created with 2432-bit RSA and SHA-1; approved */
+ 	FIPS_PUSH_CONTEXT();
+-	ret = gnutls_pubkey_verify_data2(pubkey, GNUTLS_SIGN_RSA_SHA1, 0,
+-	                                 &data, &rsa2342_sha1_sig);
++	ret = gnutls_pubkey_verify_data2(pubkey, GNUTLS_SIGN_RSA_SHA1,
++					 GNUTLS_VERIFY_ALLOW_SIGN_WITH_SHA1, &data,
++					 &rsa2342_sha1_sig);
+ 	if (ret < 0) {
+ 		fail("gnutls_pubkey_verify_data2 failed\n");
+ 	}
+@@ -501,6 +502,15 @@ void doit(void)
+ 	}
+ 	FIPS_POP_CONTEXT(APPROVED);
+ 
++        /* run self-tests manually */
++	FIPS_PUSH_CONTEXT();
++	ret = gnutls_rnd(GNUTLS_RND_RANDOM, key16, sizeof(key16));
++	ret = gnutls_fips140_run_self_tests();
++	if (ret < 0) {
++		fail("gnutls_fips140_run_self_tests failed\n");
++	}
++	FIPS_POP_CONTEXT(APPROVED);
++
+ 	/* Test when FIPS140 is set to error state */
+ 	_gnutls_lib_simulate_error();
+ 
+@@ -544,12 +554,6 @@ void doit(void)
+ 
+ 	gnutls_fips140_context_deinit(fips_context);
+ 
+-	/* run self-tests manually */
+-	ret = gnutls_fips140_run_self_tests();
+-	if (ret < 0) {
+-		fail("gnutls_fips140_run_self_tests failed\n");
+-	}
+-
+ 	gnutls_global_deinit();
+ 	return;
+ }
+-- 
+2.37.3
+

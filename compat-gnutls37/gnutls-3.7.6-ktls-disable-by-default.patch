@@ -1,0 +1,124 @@
+From f41151c8a218f255af08362b74cd6ee0dfd45c00 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Franti=C5=A1ek=20Kren=C5=BEelok?=
+ <krenzelok.frantisek@gmail.com>
+Date: Tue, 14 Jun 2022 16:16:11 +0200
+Subject: [PATCH] KTLS: disable by default enable by config
+
+KTLS will be disabled by default when build with `--enable-ktls` to
+enable it, use config file option `ktls = true` in [global] section.
+
+Signed-off-by: Frantisek Krenzelok <krenzelok.frantisek@gmail.com>
+---
+ doc/cha-config.texi | 18 ++++++++----------
+ lib/gnutls_int.h    |  2 +-
+ lib/handshake.c     |  2 +-
+ lib/priority.c      | 12 ++++++------
+ 4 files changed, 16 insertions(+), 18 deletions(-)
+
+diff --git a/doc/cha-config.texi b/doc/cha-config.texi
+index e550f2e4b1..eaab7fd799 100644
+--- a/doc/cha-config.texi
++++ b/doc/cha-config.texi
+@@ -26,7 +26,7 @@ used can be queried using @funcref{gnutls_get_system_config_file}.
+ * Querying for disabled algorithms and protocols::
+ * Overriding the parameter verification profile::
+ * Overriding the default priority string::
+-* Disabling system/acceleration protocols::
++* Enabling/Disabling system/acceleration protocols::
+ @end menu
+ 
+ @node Application-specific priority strings
+@@ -253,16 +253,14 @@ default-priority-string = SECURE128:-VERS-TLS-ALL:+VERS-TLS1.3
+ @end example
+ 
+ 
+-@node Disabling system/acceleration protocols
+-@section Disabling system/acceleration protocols
+-When system/acceleration protocol is enabled during build, it is usually
+-enabled by default. The following options can overwrite this behavior
+-system-wide.
++@node Enabling/Disabling system/acceleration protocols
++@section Enabling/Disabling system/acceleration protocols
++The following options can overwrite default behavior of protocols system-wide.
+ @example
+ [global]
+-ktls = false
++ktls = true
+ 
+ @end example
+-@subsection Disabling KTLS
+-When GnuTLS is build with -–enable-ktls configuration, it uses KTLS by default.
+-This can be overwritten by setting @code{ktls = false} in @code{[global]} section.
++@subsection Enabling KTLS
++When GnuTLS is build with -–enable-ktls configuration, KTLS is disabled by default.
++This can be enabled by setting @code{ktls = true} in @code{[global]} section.
+diff --git a/lib/gnutls_int.h b/lib/gnutls_int.h
+index 872188696b..8c7bdaa1db 100644
+--- a/lib/gnutls_int.h
++++ b/lib/gnutls_int.h
+@@ -1649,6 +1649,6 @@ get_certificate_type(gnutls_session_t session,
+ 
+ extern unsigned int _gnutls_global_version;
+ 
+-bool _gnutls_config_is_ktls_disabled(void);
++bool _gnutls_config_is_ktls_enabled(void);
+ 
+ #endif /* GNUTLS_LIB_GNUTLS_INT_H */
+diff --git a/lib/handshake.c b/lib/handshake.c
+index f3edbbdacb..4dd457bf22 100644
+--- a/lib/handshake.c
++++ b/lib/handshake.c
+@@ -2815,7 +2815,7 @@ int gnutls_handshake(gnutls_session_t session)
+ 
+ 	session->internals.ktls_enabled = 0;
+ #ifdef ENABLE_KTLS
+-	if (_gnutls_config_is_ktls_disabled() == false)
++	if (_gnutls_config_is_ktls_enabled() == true)
+ 		_gnutls_ktls_enable(session);
+ #endif
+ 
+diff --git a/lib/priority.c b/lib/priority.c
+index 7279c03c88..d163d8169f 100644
+--- a/lib/priority.c
++++ b/lib/priority.c
+@@ -1027,7 +1027,7 @@ static void dummy_func(gnutls_priority_t c)
+ 
+ struct cfg {
+ 	bool allowlisting;
+-	bool ktls_disabled;
++	bool ktls_enabled;
+ 
+ 	name_val_array_t priority_strings;
+ 	char *priority_string;
+@@ -1140,7 +1140,7 @@ cfg_steal(struct cfg *dst, struct cfg *src)
+ 	src->default_priority_string = NULL;
+ 
+ 	dst->allowlisting = src->allowlisting;
+-	dst->ktls_disabled = src->ktls_disabled;
++	dst->ktls_enabled = src->ktls_enabled;
+ 	memcpy(dst->ciphers, src->ciphers, sizeof(src->ciphers));
+ 	memcpy(dst->macs, src->macs, sizeof(src->macs));
+ 	memcpy(dst->groups, src->groups, sizeof(src->groups));
+@@ -1268,8 +1268,8 @@ static int global_ini_handler(void *ctx, const char *section, const char *name,
+ 			}
+ 		} else if (c_strcasecmp(name, "ktls") == 0) {
+ 			p = clear_spaces(value, str);
+-			if (c_strcasecmp(p, "false") == 0) {
+-				cfg->ktls_disabled = true;
++			if (c_strcasecmp(p, "true") == 0) {
++				cfg->ktls_enabled = true;
+ 			} else {
+ 				_gnutls_debug_log("cfg: unknown ktls mode %s\n",
+ 					p);
+@@ -3490,6 +3490,6 @@ gnutls_priority_string_list(unsigned iter, unsigned int flags)
+ 	return NULL;
+ }
+ 
+-bool _gnutls_config_is_ktls_disabled(void){
+-	return system_wide_config.ktls_disabled;
++bool _gnutls_config_is_ktls_enabled(void){
++	return system_wide_config.ktls_enabled;
+ }
+-- 
+2.36.1
+

@@ -12,8 +12,8 @@
 %global suffix_ver 3.7
 
 Name: compat-gnutls37
-Version: 3.7.2
-Release: 1%{?dist}
+Version: 3.7.6
+Release: 12%{?dist}
 Summary: A TLS protocol implementation
 # The libraries are LGPLv2.1+, utilities are GPLv3+
 License: GPLv3+ and LGPLv2+
@@ -22,15 +22,27 @@ URL: http://www.gnutls.org/
 Source0: https://www.gnupg.org/ftp/gcrypt/gnutls/v3.7/%{realname}-%{version}.tar.xz
 Source1: https://www.gnupg.org/ftp/gcrypt/gnutls/v3.7/%{realname}-%{version}.tar.xz.sig
 Source2: gpgkey-462225C3B46F34879FC8496CD605848ED7E69871.gpg
+# not upstreamed
 Patch1:	gnutls-3.2.7-rpath.patch
-Patch2: gnutls-3.6.4-no-now-guile.patch
+Patch2: gnutls-3.6.7-no-now-guile.patch
+
+# upstreamed
+Patch3: gnutls-3.7.6-fips-run-selftests.patch
+Patch4: gnutls-3.7.6-ktls-disable-by-default.patch
+Patch5: gnutls-3.7.6-ktls-fixes.patch
+Patch6: gnutls-3.7.6-aes-gcm-pt-limit.patch
+Patch7: gnutls-3.7.6-pkcs7-verify.patch
+Patch8: gnutls-3.7.6-fips-pkcs12-des-cbc.patch
+Patch9: gnutls-3.7.6-fips-rsa-key-sizes.patch
+Patch10: gnutls-3.7.6-fips-symkey-limit.patch
+Patch11: gnutls-3.7.6-fips-ecdsa-hash-check.patch
 
 BuildRequires: p11-kit-devel >= 0.21.3
 BuildRequires: gettext-devel
 BuildRequires: zlib-devel
 BuildRequires: readline-devel
 BuildRequires: libtasn1-devel >= 4.3
-#BuildRequires: libtool automake autoconf texinfo
+BuildRequires: libtool automake autoconf texinfo
 BuildRequires: autogen-libopts-devel >= 5.18 autogen
 BuildRequires: pkgconfig(nettle) >= 3.6
 BuildRequires: pkgconfig(hogweed) >= 3.6
@@ -220,9 +232,7 @@ echo "SYSTEM=NORMAL" >> tests/system.prio
 
 #CCASFLAGS="$CCASFLAGS -Wa,--generate-missing-build-notes=yes"
 #export CCASFLAGS
-#rm -rf build-aux/ m4/
-#autoreconf -i
-#autoreconf -v
+autoreconf -fi
 #configure \
 #if 0%{?rhel} && 0%{?rhel} < 7
 #    --with-included-libtasn1 \
@@ -381,6 +391,9 @@ fi
 %endif
 
 %changelog
+* Tue Oct 18 2022 Sérgio Basto <sergio@serjux.com> - 3.7.6-12
+- Update to 3.7.6 adapted from CentOS Sources branch c9, tag: imports/c9/gnutls-3.7.6-12.el9_0
+
 * Sun Jan 16 2022 Sérgio Basto <sergio@serjux.com> - 3.7.2-1
 - Update to 3.7.2
 

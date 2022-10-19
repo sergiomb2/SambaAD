@@ -1,0 +1,348 @@
+From 7b700dbcd5907944a7dd2f74cd26ad8586cd4bac Mon Sep 17 00:00:00 2001
+From: Daiki Ueno <ueno@gnu.org>
+Date: Tue, 28 Jun 2022 09:37:22 +0900
+Subject: [PATCH 1/3] tests: enable KTLS config while running gnutls_ktls test
+
+Signed-off-by: Daiki Ueno <ueno@gnu.org>
+---
+ tests/Makefile.am   |  9 +++++----
+ tests/gnutls_ktls.c |  4 ++--
+ tests/ktls.sh       | 46 +++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 53 insertions(+), 6 deletions(-)
+ create mode 100755 tests/ktls.sh
+
+diff --git a/tests/Makefile.am b/tests/Makefile.am
+index 4deeb6462b..cba67e8db8 100644
+--- a/tests/Makefile.am
++++ b/tests/Makefile.am
+@@ -441,10 +441,6 @@ ctests += x509self x509dn anonself pskself pskself2 dhepskself	\
+ 	resume-with-record-size-limit
+ endif
+ 
+-if ENABLE_KTLS
+-ctests += gnutls_ktls
+-endif
+-
+ ctests += record-sendfile
+ 
+ gc_CPPFLAGS = $(AM_CPPFLAGS) \
+@@ -500,6 +496,11 @@ if ENABLE_TPM2
+ dist_check_SCRIPTS += tpm2.sh
+ endif
+ 
++if ENABLE_KTLS
++indirect_tests += gnutls_ktls
++dist_check_SCRIPTS += ktls.sh
++endif
++
+ if !WINDOWS
+ 
+ #
+diff --git a/tests/gnutls_ktls.c b/tests/gnutls_ktls.c
+index 3966e2b10a..8f9c5fa36e 100644
+--- a/tests/gnutls_ktls.c
++++ b/tests/gnutls_ktls.c
+@@ -84,7 +84,7 @@ static void client(int fd, const char *prio)
+ 
+ 	ret = gnutls_transport_is_ktls_enabled(session);
+ 	if (!(ret & GNUTLS_KTLS_RECV)){
+-		fail("client: KTLS was not properly inicialized\n");
++		fail("client: KTLS was not properly initialized\n");
+ 		goto end;
+ 	}
+ 
+@@ -208,7 +208,7 @@ static void server(int fd, const char *prio)
+ 
+ 	ret = gnutls_transport_is_ktls_enabled(session);
+ 	if (!(ret & GNUTLS_KTLS_SEND)){
+-		fail("server: KTLS was not properly inicialized\n");
++		fail("server: KTLS was not properly initialized\n");
+ 		goto end;
+ 	}
+ 	do {
+diff --git a/tests/ktls.sh b/tests/ktls.sh
+new file mode 100755
+index 0000000000..ba52bd5775
+--- /dev/null
++++ b/tests/ktls.sh
+@@ -0,0 +1,46 @@
++#!/bin/sh
++
++# Copyright (C) 2022 Red Hat, Inc.
++#
++# Author: Daiki Ueno
++#
++# This file is part of GnuTLS.
++#
++# GnuTLS is free software; you can redistribute it and/or modify it
++# under the terms of the GNU General Public License as published by the
++# Free Software Foundation; either version 3 of the License, or (at
++# your option) any later version.
++#
++# GnuTLS is distributed in the hope that it will be useful, but
++# WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++# General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with GnuTLS; if not, write to the Free Software Foundation,
++# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
++
++: ${builddir=.}
++
++. "$srcdir/scripts/common.sh"
++
++if ! grep '^tls ' /proc/modules 2>1 >& /dev/null; then
++    exit 77
++fi
++
++testdir=`create_testdir ktls`
++
++cfg="$testdir/config"
++
++cat <<EOF > "$cfg"
++[global]
++ktls = true
++EOF
++
++GNUTLS_SYSTEM_PRIORITY_FAIL_ON_INVALID=1 \
++GNUTLS_SYSTEM_PRIORITY_FILE="$cfg" \
++"$builddir/gnutls_ktls" "$@"
++rc=$?
++
++rm -rf "$testdir"
++exit $rc
+-- 
+2.36.1
+
+
+From 4a492462535a7f3a831685d3cf420b50ef219511 Mon Sep 17 00:00:00 2001
+From: Daiki Ueno <ueno@gnu.org>
+Date: Tue, 28 Jun 2022 10:23:33 +0900
+Subject: [PATCH 2/3] handshake: do not reset KTLS enablement in
+ gnutls_handshake
+
+As gnutls_handshake can be repeatedly called upon non-blocking setup,
+we shouldn't try to call setsockopt for KTLS upon every call.
+
+Signed-off-by: Daiki Ueno <ueno@gnu.org>
+---
+ lib/handshake.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/lib/handshake.c b/lib/handshake.c
+index 4dd457bf22..3886306eb4 100644
+--- a/lib/handshake.c
++++ b/lib/handshake.c
+@@ -2813,12 +2813,6 @@ int gnutls_handshake(gnutls_session_t session)
+ 	const version_entry_st *vers = get_version(session);
+ 	int ret;
+ 
+-	session->internals.ktls_enabled = 0;
+-#ifdef ENABLE_KTLS
+-	if (_gnutls_config_is_ktls_enabled() == true)
+-		_gnutls_ktls_enable(session);
+-#endif
+-
+ 	if (unlikely(session->internals.initial_negotiation_completed)) {
+ 		if (vers->tls13_sem) {
+ 			if (session->security_parameters.entity == GNUTLS_CLIENT) {
+@@ -2864,6 +2858,12 @@ int gnutls_handshake(gnutls_session_t session)
+ 			end->tv_nsec =
+ 				(start->tv_nsec + tmo_ms * 1000000LL) % 1000000000LL;
+ 		}
++
++#ifdef ENABLE_KTLS
++		if (_gnutls_config_is_ktls_enabled()) {
++			_gnutls_ktls_enable(session);
++		}
++#endif
+ 	}
+ 
+ 	if (session->internals.recv_state == RECV_STATE_FALSE_START) {
+-- 
+2.36.1
+
+
+From ce13208e13b5dec73993c583d4c64ab7714e4a7a Mon Sep 17 00:00:00 2001
+From: Daiki Ueno <ueno@gnu.org>
+Date: Tue, 28 Jun 2022 10:53:55 +0900
+Subject: [PATCH 3/3] ktls: _gnutls_ktls_enable: fix GNUTLS_KTLS_SEND
+ calculation
+
+Previously, if the first setsockopt for GNUTLS_KTLS_RECV fails and the
+same socket is used for both sending and receiving, GNUTLS_KTLS_SEND
+was unconditionally set.  This fixes the conditions and also adds more
+logging.
+
+Signed-off-by: Daiki Ueno <ueno@gnu.org>
+---
+ lib/system/ktls.c | 21 ++++++++++++++++-----
+ 1 file changed, 16 insertions(+), 5 deletions(-)
+
+diff --git a/lib/system/ktls.c b/lib/system/ktls.c
+index b9f7a73fb5..ddf27fac76 100644
+--- a/lib/system/ktls.c
++++ b/lib/system/ktls.c
+@@ -47,7 +47,7 @@
+ gnutls_transport_ktls_enable_flags_t
+ gnutls_transport_is_ktls_enabled(gnutls_session_t session){
+ 	if (unlikely(!session->internals.initial_negotiation_completed)){
+-		_gnutls_debug_log("Initial negotiation is not yet complete");
++		_gnutls_debug_log("Initial negotiation is not yet complete\n");
+ 		return 0;
+ 	}
+ 
+@@ -57,16 +57,27 @@ gnutls_transport_is_ktls_enabled(gnutls_session_t session){
+ void _gnutls_ktls_enable(gnutls_session_t session)
+ {
+ 	int sockin, sockout;
++
+ 	gnutls_transport_get_int2(session, &sockin, &sockout);
+ 
+-	if (setsockopt(sockin, SOL_TCP, TCP_ULP, "tls", sizeof ("tls")) == 0)
++	if (setsockopt(sockin, SOL_TCP, TCP_ULP, "tls", sizeof ("tls")) == 0) {
+ 		session->internals.ktls_enabled |= GNUTLS_KTLS_RECV;
++		if (sockin == sockout) {
++			session->internals.ktls_enabled |= GNUTLS_KTLS_SEND;
++		}
++	} else {
++		_gnutls_record_log("Unable to set TCP_ULP for read socket: %d\n",
++				   errno);
++	}
+ 
+ 	if (sockin != sockout) {
+-		if (setsockopt(sockout, SOL_TCP, TCP_ULP, "tls", sizeof ("tls")) == 0)
++		if (setsockopt(sockout, SOL_TCP, TCP_ULP, "tls", sizeof ("tls")) == 0) {
+ 			session->internals.ktls_enabled |= GNUTLS_KTLS_SEND;
+-	} else
+-		session->internals.ktls_enabled |= GNUTLS_KTLS_SEND;
++		} else {
++			_gnutls_record_log("Unable to set TCP_ULP for write socket: %d\n",
++					   errno);
++		}
++	}
+ }
+ 
+ int _gnutls_ktls_set_keys(gnutls_session_t session)
+-- 
+2.36.1
+
+From 2d3cba6bb21acb40141180298f3924c73c7de8f8 Mon Sep 17 00:00:00 2001
+From: Daiki Ueno <ueno@gnu.org>
+Date: Tue, 26 Jul 2022 11:38:41 +0900
+Subject: [PATCH 1/2] handshake: do not enable KTLS if custom pull/push
+ functions are set
+
+If gnutls_transport_set_pull_function or
+gnutls_transport_set_push_function is used, we can't assume the
+underlying transport handle is an FD.
+
+Signed-off-by: Daiki Ueno <ueno@gnu.org>
+---
+ lib/handshake.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/lib/handshake.c b/lib/handshake.c
+index 3886306eb4..cf025a84f6 100644
+--- a/lib/handshake.c
++++ b/lib/handshake.c
+@@ -2861,7 +2861,14 @@ int gnutls_handshake(gnutls_session_t session)
+ 
+ #ifdef ENABLE_KTLS
+ 		if (_gnutls_config_is_ktls_enabled()) {
+-			_gnutls_ktls_enable(session);
++			if (session->internals.pull_func ||
++			    session->internals.push_func) {
++				_gnutls_audit_log(session,
++						  "Not enabling KTLS with "
++						  "custom pull/push function\n");
++			} else {
++				_gnutls_ktls_enable(session);
++			}
+ 		}
+ #endif
+ 	}
+-- 
+2.37.1
+
+
+From f7160e4fb970b4ba6f96e85e21f8395eae735d95 Mon Sep 17 00:00:00 2001
+From: Daiki Ueno <ueno@gnu.org>
+Date: Tue, 26 Jul 2022 11:39:57 +0900
+Subject: [PATCH 2/2] socket: only set pull/push functions when --save-*-trace
+ is used
+
+This allows gnutls-cli to use KTLS for the transport, unless either
+--save-client-trace or --save-server-trace is used.
+
+Signed-off-by: Daiki Ueno <ueno@gnu.org>
+---
+ src/socket.c | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/src/socket.c b/src/socket.c
+index 39f18dbe18..36ac292700 100644
+--- a/src/socket.c
++++ b/src/socket.c
+@@ -586,16 +586,16 @@ socket_open2(socket_st * hd, const char *hostname, const char *service,
+ 				gnutls_session_set_data(hd->session, hd->rdata.data, hd->rdata.size);
+ 			}
+ 
+-			if (server_trace)
++			if (client_trace || server_trace) {
+ 				hd->server_trace = server_trace;
+-
+-			if (client_trace)
+ 				hd->client_trace = client_trace;
+-
+-			gnutls_transport_set_push_function(hd->session, wrap_push);
+-			gnutls_transport_set_pull_function(hd->session, wrap_pull);
+-			gnutls_transport_set_pull_timeout_function(hd->session, wrap_pull_timeout_func);
+-			gnutls_transport_set_ptr(hd->session, hd);
++				gnutls_transport_set_push_function(hd->session, wrap_push);
++				gnutls_transport_set_pull_function(hd->session, wrap_pull);
++				gnutls_transport_set_pull_timeout_function(hd->session, wrap_pull_timeout_func);
++				gnutls_transport_set_ptr(hd->session, hd);
++			} else {
++				gnutls_transport_set_int(hd->session, hd->fd);
++			}
+ 		}
+ 
+ 		if (!(flags & SOCKET_FLAG_RAW) && !(flags & SOCKET_FLAG_SKIP_INIT)) {
+-- 
+2.37.1
+
+From a5b671fc9105cb5dbe6e6a1c0f39fa787d862076 Mon Sep 17 00:00:00 2001
+From: Frantisek Krenzelok <krenzelok.frantisek@gmail.com>
+Date: Fri, 29 Jul 2022 10:38:42 +0200
+Subject: [PATCH] KTLS: hotfix
+
+session->internals.pull_func is set to system_read during gnutls_init()
+so check for user set pull/push function added in commit mentioned
+bellow will never pass.
+
+source: 2d3cba6bb21acb40141180298f3924c73c7de8f8
+
+Signed-off-by: Frantisek Krenzelok <krenzelok.frantisek@gmail.com>
+---
+ lib/handshake.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/lib/handshake.c b/lib/handshake.c
+index cf025a84f6..21edc5ece9 100644
+--- a/lib/handshake.c
++++ b/lib/handshake.c
+@@ -2861,7 +2861,8 @@ int gnutls_handshake(gnutls_session_t session)
+ 
+ #ifdef ENABLE_KTLS
+ 		if (_gnutls_config_is_ktls_enabled()) {
+-			if (session->internals.pull_func ||
++			if ((session->internals.pull_func &&
++				session->internals.pull_func != system_read) ||
+ 			    session->internals.push_func) {
+ 				_gnutls_audit_log(session,
+ 						  "Not enabling KTLS with "
+-- 
+2.37.1
+

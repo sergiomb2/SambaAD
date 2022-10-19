@@ -1,0 +1,310 @@
+From f8a8961cfa176fc74c153cb6e1e68aff5e2d42f2 Mon Sep 17 00:00:00 2001
+From: rpm-build <rpm-build>
+Date: Tue, 27 Sep 2022 10:52:19 +0900
+Subject: [PATCH] gnutls-3.7.6-fips-symkey-limit.patch
+
+---
+ lib/crypto-api.c  | 26 ++++++++++++++++++++++---
+ tests/fips-test.c | 49 +++++++++++++++++++++++++++++++++++++++++++++++
+ tests/kdf-api.c   |  9 ++++++++-
+ 3 files changed, 80 insertions(+), 4 deletions(-)
+
+diff --git a/lib/crypto-api.c b/lib/crypto-api.c
+index b3e1eec..35200fb 100644
+--- a/lib/crypto-api.c
++++ b/lib/crypto-api.c
+@@ -896,6 +896,7 @@ gnutls_hash_hd_t gnutls_hash_copy(gnutls_hash_hd_t handle)
+ int gnutls_key_generate(gnutls_datum_t * key, unsigned int key_size)
+ {
+ 	int ret;
++	bool not_approved = false;
+ 
+ 	FAIL_IF_LIB_ERROR;
+ 
+@@ -912,17 +913,31 @@ int gnutls_key_generate(gnutls_datum_t * key, unsigned int key_size)
+ 	key->data = gnutls_malloc(key->size);
+ 	if (!key->data) {
+ 		gnutls_assert();
+-		return GNUTLS_E_MEMORY_ERROR;
++		ret = GNUTLS_E_MEMORY_ERROR;
++		goto error;
++	}
++
++	/* Key lengths of less than 112 bits are not approved */
++	if (key_size < 14) {
++		not_approved = true;
+ 	}
+ 
+ 	ret = gnutls_rnd(GNUTLS_RND_RANDOM, key->data, key->size);
+ 	if (ret < 0) {
+ 		gnutls_assert();
+ 		_gnutls_free_datum(key);
+-		return ret;
++		goto error;
+ 	}
+ 
+-	return 0;
++ error:
++	if (ret < 0) {
++		_gnutls_switch_fips_state(GNUTLS_FIPS140_OP_ERROR);
++	} else if (not_approved) {
++		_gnutls_switch_fips_state(GNUTLS_FIPS140_OP_NOT_APPROVED);
++	} else {
++		_gnutls_switch_fips_state(GNUTLS_FIPS140_OP_APPROVED);
++	}
++	return ret;
+ }
+ 
+ /* AEAD API */
+@@ -2058,6 +2073,11 @@ gnutls_pbkdf2(gnutls_mac_algorithm_t mac,
+ 		not_approved = true;
+ 	}
+ 
++	/* Key lengths and output sizes of less than 112 bits are not approved */
++	if (key->size < 14 || length < 14) {
++		not_approved = true;
++	}
++
+ 	ret = _gnutls_kdf_ops.pbkdf2(mac, key->data, key->size,
+ 				     salt->data, salt->size, iter_count,
+ 				     output, length);
+diff --git a/tests/fips-test.c b/tests/fips-test.c
+index 31a5e26..27da414 100644
+--- a/tests/fips-test.c
++++ b/tests/fips-test.c
+@@ -274,6 +274,8 @@ void doit(void)
+ 	gnutls_datum_t signature;
+ 	unsigned int bits;
+ 	uint8_t hmac[64];
++	uint8_t pbkdf2[64];
++	gnutls_datum_t temp_key = { NULL, 0 };
+ 
+ 	fprintf(stderr,
+ 		"Please note that if in FIPS140 mode, you need to assure the library's integrity prior to running this test\n");
+@@ -371,11 +373,58 @@ void doit(void)
+ 	}
+ 	FIPS_POP_CONTEXT(NOT_APPROVED);
+ 
++	/* PBKDF2 with key equal to or longer than 112 bits: approved */
++	FIPS_PUSH_CONTEXT();
++	ret = gnutls_pbkdf2(GNUTLS_MAC_SHA256, &key, &iv, 100,
++			    &pbkdf2, sizeof(pbkdf2));
++	if (ret < 0) {
++		fail("gnutls_pbkdf2 failed\n");
++	}
++	FIPS_POP_CONTEXT(APPROVED);
++
++	/* PBKDF2 with key shorter than 112 bits: not approved */
++	FIPS_PUSH_CONTEXT();
++	key.size = 13;
++	ret = gnutls_pbkdf2(GNUTLS_MAC_SHA256, &key, &iv, 100,
++			    &pbkdf2, sizeof(pbkdf2));
++	if (ret < 0) {
++		fail("gnutls_pbkdf2 failed\n");
++	}
++	key.size = sizeof(key16);
++	FIPS_POP_CONTEXT(NOT_APPROVED);
++
++	/* PBKDF2 with output shorter than 112 bits: not approved */
++	FIPS_PUSH_CONTEXT();
++	ret = gnutls_pbkdf2(GNUTLS_MAC_SHA256, &key, &iv, 100,
++			    &pbkdf2, 13);
++	if (ret < 0) {
++		fail("gnutls_pbkdf2 failed\n");
++	}
++	FIPS_POP_CONTEXT(NOT_APPROVED);
++
+ 	ret = gnutls_rnd(GNUTLS_RND_NONCE, key16, sizeof(key16));
+ 	if (ret < 0) {
+ 		fail("gnutls_rnd failed\n");
+ 	}
+ 
++	/* Symmetric key generation equal to or longer than 112 bits: approved */
++	FIPS_PUSH_CONTEXT();
++	ret = gnutls_key_generate(&temp_key, 14);
++	if (ret < 0) {
++		fail("gnutls_key_generate failed\n");
++	}
++	gnutls_free(temp_key.data);
++	FIPS_POP_CONTEXT(APPROVED);
++
++	/* Symmetric key generation shorter than 112 bits: not approved */
++	FIPS_PUSH_CONTEXT();
++	ret = gnutls_key_generate(&temp_key, 13);
++	if (ret < 0) {
++		fail("gnutls_key_generate failed\n");
++	}
++	gnutls_free(temp_key.data);
++	FIPS_POP_CONTEXT(NOT_APPROVED);
++
+ 	ret = gnutls_pubkey_init(&pubkey);
+ 	if (ret < 0) {
+ 		fail("gnutls_pubkey_init failed\n");
+diff --git a/tests/kdf-api.c b/tests/kdf-api.c
+index 25fbc6a..8a4677c 100644
+--- a/tests/kdf-api.c
++++ b/tests/kdf-api.c
+@@ -89,6 +89,7 @@ test_hkdf(gnutls_mac_algorithm_t mac,
+ 
+ 	FIPS_PUSH_CONTEXT();
+ 	assert(gnutls_hkdf_extract(mac, &ikm, &salt, buf) >= 0);
++	/* HKDF outside of TLS usage is not approved */
+ 	FIPS_POP_CONTEXT(NOT_APPROVED);
+ 	gnutls_free(ikm.data);
+ 	gnutls_free(salt.data);
+@@ -110,6 +111,7 @@ test_hkdf(gnutls_mac_algorithm_t mac,
+ 
+ 	FIPS_PUSH_CONTEXT();
+ 	assert(gnutls_hkdf_expand(mac, &prk, &info, buf, length) >= 0);
++	/* HKDF outside of TLS usage is not approved */
+ 	FIPS_POP_CONTEXT(NOT_APPROVED);
+ 	gnutls_free(info.data);
+ 
+@@ -151,7 +153,12 @@ test_pbkdf2(gnutls_mac_algorithm_t mac,
+ 
+ 	FIPS_PUSH_CONTEXT();
+ 	assert(gnutls_pbkdf2(mac, &ikm, &salt, iter_count, buf, length) >= 0);
+-	FIPS_POP_CONTEXT(APPROVED);
++	/* Key sizes and output sizes less than 112-bit are not approved.  */
++	if (ikm.size < 14 || length < 14) {
++		FIPS_POP_CONTEXT(NOT_APPROVED);
++	} else {
++		FIPS_POP_CONTEXT(APPROVED);
++	}
+ 	gnutls_free(ikm.data);
+ 	gnutls_free(salt.data);
+ 
+-- 
+2.37.3
+
+From 86eded166f77612c70201c0d85d3abe711edd77d Mon Sep 17 00:00:00 2001
+From: Daiki Ueno <ueno@gnu.org>
+Date: Thu, 29 Sep 2022 21:19:26 +0900
+Subject: [PATCH] fips: only mark HMAC as approved in PBKDF2
+
+As ACVP only allows HMAC used with PBKDF2[1], this change marks other
+hash algorithms not-approved.
+
+1. https://pages.nist.gov/ACVP/draft-celi-acvp-pbkdf.html
+
+Signed-off-by: Daiki Ueno <ueno@gnu.org>
+---
+ lib/crypto-api.c |  5 ++++-
+ lib/fips.h       | 16 +++++++++++++++-
+ tests/kdf-api.c  | 30 +++++++++++++++++++++++++++++-
+ 3 files changed, 48 insertions(+), 3 deletions(-)
+
+diff --git a/lib/crypto-api.c b/lib/crypto-api.c
+index d3e601ab3a..9f7e18db11 100644
+--- a/lib/crypto-api.c
++++ b/lib/crypto-api.c
+@@ -2229,7 +2229,10 @@ gnutls_pbkdf2(gnutls_mac_algorithm_t mac,
+ 	if (!is_mac_algo_allowed(mac)) {
+ 		_gnutls_switch_fips_state(GNUTLS_FIPS140_OP_ERROR);
+ 		return gnutls_assert_val(GNUTLS_E_UNWANTED_ALGORITHM);
+-	} else if (!is_mac_algo_approved_in_fips(mac)) {
++	} else if (!is_mac_algo_hmac_approved_in_fips(mac)) {
++		/* ACVP only allows HMAC used with PBKDF2:
++		 * https://pages.nist.gov/ACVP/draft-celi-acvp-pbkdf.html
++		 */
+ 		not_approved = true;
+ 	}
+ 
+diff --git a/lib/fips.h b/lib/fips.h
+index 3a74f254e7..bf61b36741 100644
+--- a/lib/fips.h
++++ b/lib/fips.h
+@@ -76,7 +76,7 @@ void _gnutls_lib_simulate_error(void);
+ void _gnutls_lib_force_operational(void);
+ 
+ inline static bool
+-is_mac_algo_approved_in_fips(gnutls_mac_algorithm_t algo)
++is_mac_algo_hmac_approved_in_fips(gnutls_mac_algorithm_t algo)
+ {
+ 	switch (algo) {
+ 	case GNUTLS_MAC_SHA1:
+@@ -88,6 +88,20 @@ is_mac_algo_approved_in_fips(gnutls_mac_algorithm_t algo)
+ 	case GNUTLS_MAC_SHA3_256:
+ 	case GNUTLS_MAC_SHA3_384:
+ 	case GNUTLS_MAC_SHA3_512:
++		return true;
++	default:
++		return false;
++	}
++}
++
++inline static bool
++is_mac_algo_approved_in_fips(gnutls_mac_algorithm_t algo)
++{
++	if (is_mac_algo_hmac_approved_in_fips(algo)) {
++		return true;
++	}
++
++	switch (algo) {
+ 	case GNUTLS_MAC_AES_CMAC_128:
+ 	case GNUTLS_MAC_AES_CMAC_256:
+ 	case GNUTLS_MAC_AES_GMAC_128:
+diff --git a/tests/kdf-api.c b/tests/kdf-api.c
+index 577cbf7a17..4feb22688b 100644
+--- a/tests/kdf-api.c
++++ b/tests/kdf-api.c
+@@ -26,6 +26,7 @@
+ #include <gnutls/crypto.h>
+ 
+ #include <assert.h>
++#include <stdbool.h>
+ #include <stdint.h>
+ 
+ #include "utils.h"
+@@ -133,6 +134,25 @@ test_hkdf(gnutls_mac_algorithm_t mac,
+ 	gnutls_free(hex.data);
+ }
+ 
++inline static bool
++is_mac_algo_hmac_approved_in_fips(gnutls_mac_algorithm_t algo)
++{
++	switch (algo) {
++	case GNUTLS_MAC_SHA1:
++	case GNUTLS_MAC_SHA256:
++	case GNUTLS_MAC_SHA384:
++	case GNUTLS_MAC_SHA512:
++	case GNUTLS_MAC_SHA224:
++	case GNUTLS_MAC_SHA3_224:
++	case GNUTLS_MAC_SHA3_256:
++	case GNUTLS_MAC_SHA3_384:
++	case GNUTLS_MAC_SHA3_512:
++		return true;
++	default:
++		return false;
++	}
++}
++
+ static void
+ test_pbkdf2(gnutls_mac_algorithm_t mac,
+ 	    const char *ikm_hex,
+@@ -161,7 +181,8 @@ test_pbkdf2(gnutls_mac_algorithm_t mac,
+ 	FIPS_PUSH_CONTEXT();
+ 	assert(gnutls_pbkdf2(mac, &ikm, &salt, iter_count, buf, length) >= 0);
+ 	/* Key sizes and output sizes less than 112-bit are not approved.  */
+-	if (ikm.size < 14 || length < 14) {
++	if (ikm.size < 14 || length < 14 ||
++	    !is_mac_algo_hmac_approved_in_fips(mac)) {
+ 		FIPS_POP_CONTEXT(NOT_APPROVED);
+ 	} else {
+ 		FIPS_POP_CONTEXT(APPROVED);
+@@ -208,5 +229,12 @@ doit(void)
+ 		    20,
+ 		    "4b007901b765489abead49d926f721d065a429c1");
+ 
++	test_pbkdf2(GNUTLS_MAC_AES_CMAC_128,
++		    "70617373776f726470617373776f7264", /* "passwordpassword" */
++		    "73616c74",		/* "salt" */
++		    4096,
++		    20,
++		    "c4c112c6e1e3b8757640603dec78825ff87605a7");
++
+ 	gnutls_fips140_context_deinit(fips_context);
+ }
+-- 
+2.37.3
+
